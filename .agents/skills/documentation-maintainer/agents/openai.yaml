@@ -1,0 +1,4 @@
+interface:
+  display_name: "Documentation Maintainer"
+  short_description: "Keep MkDocs and Backstage docs aligned with the code"
+  default_prompt: "Use $documentation-maintainer to update documentation for the current changes and verify TechDocs compatibility."

@@ -1,0 +1,7 @@
+site_name: "Platform GitOps Manifests"
+site_description: "Contains k8s cluster add-ons, Argo CD resources and application deployments"
+nav:
+  - Home: index.md
+  - Architecture: architecture.md
+plugins:
+  - techdocs-core

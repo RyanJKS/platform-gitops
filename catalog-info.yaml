@@ -1,0 +1,12 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: "platform-gitops"
+  title: "Platform GitOps Manifests"
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+  description: "Contains k8s cluster add-ons, Argo CD resources and application deployments"
+spec:
+  type: service
+  lifecycle: experimental
+  owner: "user:default/ryanjks"
