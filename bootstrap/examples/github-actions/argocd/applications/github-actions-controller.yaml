@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: github-actions-controller
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: '-2'
+spec:
+  project: platform
+  sources:
+  - repoURL: ghcr.io/actions/actions-runner-controller-charts
+    chart: gha-runner-scale-set-controller
+    targetRevision: 0.13.0
+    helm:
+      releaseName: arc-controller
+      valueFiles:
+      - $values/catalog/platform/github-actions/controller/values.yaml
+      - $values/bootstrap/examples/github-actions/platform/controller/values.yaml
+  - repoURL: https://github.com/RyanJKS/platform-gitops.git
+    targetRevision: main
+    ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: arc-systems
+  syncPolicy:
+    syncOptions:
+    - ServerSideApply=true
