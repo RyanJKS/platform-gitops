@@ -1,7 +1,14 @@
-site_name: "Platform GitOps Manifests"
-site_description: "Contains k8s cluster add-ons, Argo CD resources and application deployments"
+site_name: Platform GitOps Manifests
+site_description: Kubernetes platform capabilities and application deployments managed by Argo CD
 nav:
   - Home: index.md
   - Architecture: architecture.md
+  - Configuration boundaries: configuration-boundaries.md
+  - Bootstrap: bootstrap.md
+  - Adding a cluster: adding-a-cluster.md
+  - Onboarding an application: onboarding-an-application.md
+  - GitHub Actions runners: github-actions-runners.md
+  - Promotion: promotion.md
+  - Recovery: recovery.md
 plugins:
   - techdocs-core
