@@ -1,2 +1,7 @@
-# Owners must have write access. Enable required code-owner review in repository rules.
 * @RyanJKS
+/bootstrap/ @RyanJKS
+/catalog/ @RyanJKS
+/clusters/ @RyanJKS
+/docs/ @RyanJKS
+/.github/ @RyanJKS
+/scripts/ @RyanJKS

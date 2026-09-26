@@ -20,6 +20,6 @@ body:
     id: environment
     attributes:
       label: Environment
-      description: Include the version or commit, Python version, and operating system.
+      description: Include the version or commit, Kubernetes and Argo CD versions, and operating system.
     validations:
       required: true
