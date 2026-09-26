@@ -1,0 +1,4 @@
+config:
+  envoyGateway:
+    provider:
+      type: Kubernetes

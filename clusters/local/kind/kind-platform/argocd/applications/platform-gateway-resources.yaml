@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform-gateway-resources
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: '0'
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/RyanJKS/platform-gitops.git
+    targetRevision: main
+    path: clusters/local/kind/kind-platform/platform/gateway/resources
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: envoy-gateway-system
+  syncPolicy:
+    syncOptions:
+    - ServerSideApply=true
