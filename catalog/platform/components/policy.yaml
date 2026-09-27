@@ -1,5 +1,0 @@
-name: platform-policy
-type: kustomize
-wave: '-1'
-namespace: ''
-resourcePath: platform/policy

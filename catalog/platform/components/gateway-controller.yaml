@@ -1,9 +1,0 @@
-name: platform-gateway-controller
-type: helm
-wave: '-2'
-namespace: envoy-gateway-system
-repoURL: docker.io/envoyproxy
-chart: gateway-helm
-version: v1.3.2
-releaseName: envoy-gateway
-defaultValues: $values/catalog/platform/gateway/values.yaml

@@ -1,6 +1,0 @@
-template:
-  spec:
-    containers:
-    - name: runner
-      command:
-      - /home/runner/run.sh

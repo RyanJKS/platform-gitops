@@ -1,6 +1,0 @@
-config:
-  envoyGateway:
-    provider:
-      type: Kubernetes
-deployment:
-  replicas: 1

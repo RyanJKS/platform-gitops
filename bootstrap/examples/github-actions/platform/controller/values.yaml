@@ -1,3 +1,0 @@
-replicaCount: 1
-serviceAccount:
-  name: arc-controller

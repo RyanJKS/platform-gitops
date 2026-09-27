@@ -1,5 +1,0 @@
-name: platform-gateway-resources
-type: kustomize
-wave: '0'
-namespace: envoy-gateway-system
-resourcePath: platform/gateway/resources
