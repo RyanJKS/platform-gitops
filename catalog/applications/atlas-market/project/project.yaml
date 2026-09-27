@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: atlas-market
+  namespace: argocd
+spec:
+  sourceRepos:
+    - https://github.com/RyanJKS/platform-gitops.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: atlas-market
+  clusterResourceWhitelist: []
+  namespaceResourceWhitelist:
+    - group: apps
+      kind: Deployment
+    - group: ""
+      kind: Service
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute

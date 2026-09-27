@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: chaos-generator
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/RyanJKS/platform-gitops.git
+    targetRevision: main
+    path: clusters/azure/DEV-JKS/dev/uks/spoke-atlas/aks-shared/applications/chaos-generator
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: chaos-generator
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

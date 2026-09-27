@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform-cert-manager
+  namespace: argocd
+spec:
+  project: cert-manager
+  sources:
+    - repoURL: https://charts.jetstack.io
+      chart: cert-manager
+      targetRevision: v1.20.4
+      helm:
+        releaseName: cert-manager
+        valueFiles:
+          - $values/catalog/platform/cert-manager/values.yaml
+          - $values/catalog/platform/cert-manager/argocd-values.yaml
+    - repoURL: https://github.com/RyanJKS/platform-gitops.git
+      targetRevision: main
+      ref: values
+      path: catalog/platform/cert-manager/issuers
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

@@ -1,0 +1,19 @@
+# Inactive legacy example. Do not apply on aks-shared.
+# Terraform owns all-apps; see docs/bootstrap.md for its source contract.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: azure-dev-uksouth-atlas-shared
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/RyanJKS/platform-gitops.git
+    targetRevision: main
+    path: clusters/azure/DEV-JKS/dev/eus2/spoke-atlas/aks-shared/argocd
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    syncOptions:
+      - ServerSideApply=true

@@ -8,7 +8,7 @@ Describe the checks or tests performed and their results.
 
 ## Checklist
 
-- [ ] Pre-commit checks pass.
+- [ ] Manifest validation and TechDocs checks pass.
 - [ ] Relevant behavior is tested, or the reason tests are unnecessary is explained.
 - [ ] Documentation and changelog are updated where needed.
 - [ ] Breaking changes and migration steps are documented where needed.

@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chaos-generator
+  labels:
+    app: chaos-generator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chaos-generator
+  template:
+    metadata:
+      labels:
+        app: chaos-generator
+    spec:
+      containers:
+        - name: chaos-generator-container
+          image: ryanjks/chaos-generator:v1
+          ports:
+            - containerPort: 8501
+
+  strategy:
+    type: RollingUpdate
+
+    rollingUpdate:
+      maxUnavailable: 1 # Specifies the maximum number of Pods that can be unavailable during the update.
+      maxSurge: 1 # Specifies the maximum number of Pods that can be created over the desired number of Pods.
+

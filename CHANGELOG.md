@@ -1,9 +1,26 @@
 # Changelog
 
-Record notable changes here. Group release entries under Added, Changed, Fixed, and Removed as needed.
-
 ## Unreleased
 
 ### Added
 
-- Initial repository scaffold with Python entry point, CI, and development conventions.
+- Optional ARC controller and runner scale-set catalog defaults, namespace bases, validated examples, and onboarding guidance.
+
+- Shared platform defaults, namespaces, gateway resources, and workload bases with minimal cluster overlays.
+- Azure dev shared and dedicated cluster roots, plus local kind bootstrap.
+- Reserved Azure production and AWS development cluster directories.
+- Bootstrap, onboarding, promotion, recovery, and architecture guides.
+- Manifest rendering, schema validation, and strict TechDocs checks in CI.
+
+### Changed
+
+- Grouped environments beneath subscription/account aliases, using `DEV-JKS` for the current Azure subscription.
+
+- Renamed cluster configuration from `live/` to `clusters/` and removed redundant inner cluster directories.
+
+- Cluster overlays now own platform permissions, namespace security labels, quotas, Gateway listeners, and controller sizing.
+- Documented developer boundaries for shared installation defaults and future cluster features.
+
+### Removed
+
+- Python starter application, Python tooling, pre-commit configuration, and unused infrastructure scaffold.

@@ -1,13 +1,46 @@
 # Contributing
 
-Follow the setup steps in [README.md](README.md), including `pre-commit install`.
+1. Create a branch from `main` and keep changes focused.
+2. Run `scripts/validate.sh` with the tool versions listed in `.github/workflows/validate.yaml`.
+   This needs network access for pinned charts and Kubernetes schemas.
+3. Review rendered resources for every affected cluster. Validation does not contact a Kubernetes API
+   and cannot confirm runtime readiness, cloud identities, DNS, or secret access.
+4. Update documentation and the changelog when behavior or operations change.
+5. Open a pull request describing the problem, resulting behavior, and validation.
 
-1. Create a branch from `main` with a descriptive name.
-2. Keep changes focused and add tests for new behavior when applicable.
-3. Run `pre-commit run --all-files` and `python -m compileall -q src`.
-4. Update documentation and the changelog when behavior or setup changes.
-5. Open a pull request describing the problem, changes, and validation.
+Run the same strict documentation build as CI from the repository root:
 
-Use clear commit messages. Never commit secrets, local environment files, or infrastructure state. Document new configuration with safe example values.
+```sh
+docker run --rm -v "$PWD:/content" -w /content spotify/techdocs:v1.2.6 \
+  build --strict --site-dir /tmp/site
+```
 
-To update hook versions, run `pre-commit autoupdate`, run all checks, and review the resulting changes before committing.
+An existing MkDocs environment with `mkdocs-techdocs-core` can instead run
+`mkdocs build --strict --site-dir /tmp/platform-gitops-docs`.
+Keep `mkdocs.yml`, `docs/`, and the `dir:.` TechDocs annotation in `catalog-info.yaml` aligned.
+Do not commit generated documentation, secrets, local kubeconfig files, or infrastructure state.
+
+Require the `Manifests` and `TechDocs` jobs in branch protection. Chart version updates require
+review of upstream compatibility and migration notes. Dependabot maintains GitHub Actions only.
+
+## Configuration placement
+
+Read [configuration boundaries](docs/configuration-boundaries.md) before adding defaults or cluster features.
+Shared catalog changes must be portable across their consumers. Put permissions, namespace policy,
+quotas, networking, TLS, identities, storage, and operational sizing under the target cluster.
+Identical policy values are not a reason to centralize independent cluster decisions.
+Add the feature's validation and operational documentation in the same change.
+
+Manifest validation also requires Go (version declared in
+`scripts/render-applications/go.mod`). This module now contains direct Application
+selection tests; the unused ApplicationSet expander has been removed. Run the tests
+with `cd scripts/render-applications && go test ./...`. The validator renders every
+cluster entry point and selected child source, including roots created by Terraform.
+
+Inspect a cluster without connecting to Kubernetes:
+
+```sh
+kubectl kustomize clusters/azure/DEV-JKS/dev/uks/spoke-atlas/aks-shared/argocd
+```
+
+Offline validation does not prove live ownership, controller readiness, or DNS.
