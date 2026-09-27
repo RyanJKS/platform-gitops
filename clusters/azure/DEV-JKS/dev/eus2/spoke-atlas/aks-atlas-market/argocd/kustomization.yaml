@@ -1,26 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - ../../../../../../../../catalog/platform/applicationsets/platform
   - projects
+  - ../../../../../../../../catalog/applications/atlas-market/namespace
   - applications/atlas-market-api.yaml
   - applications/atlas-market-worker.yaml
-patches:
-  - target:
-      kind: ApplicationSet
-      name: platform
-    patch: |
-      - op: replace
-        path: /spec/generators/0/matrix/generators/0/list/elements
-        value:
-        - component: cert-manager
-        - component: external-secrets
-        - component: monitoring
-        - component: gateway-controller
-        - component: namespaces
-        - component: policy
-          namespaceOverride: atlas-market
-        - component: gateway-resources
-      - op: replace
-        path: /spec/generators/0/matrix/generators/1/git/values/clusterPath
-        value: clusters/azure/DEV-JKS/dev/eus2/spoke-atlas/aks-atlas-market
