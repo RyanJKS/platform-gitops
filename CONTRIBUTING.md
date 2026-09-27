@@ -41,7 +41,7 @@ with `cd scripts/render-applications && go test ./...`.
 For a single cluster, inspect generated Applications without a cluster connection:
 
 ```sh
-CLUSTER=clusters/local/kind/kind-platform
+CLUSTER=clusters/azure/DEV-JKS/dev/eus2/spoke-atlas/aks-atlas-market
 kubectl kustomize "$CLUSTER/argocd" | yq 'select(.kind == "ApplicationSet")' > /tmp/platform-appset.yaml
 (cd scripts/render-applications && go build -o /tmp/render-applications .)
 /tmp/render-applications "$PWD" "$CLUSTER" /tmp/platform-appset.yaml

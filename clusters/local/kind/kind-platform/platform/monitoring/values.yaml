@@ -1,5 +1,0 @@
-prometheus:
-  prometheusSpec:
-    resources:
-      requests:
-        memory: 256Mi

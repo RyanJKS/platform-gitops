@@ -1,27 +1,4 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - ../../../../../catalog/platform/applicationsets/platform
-  - projects
-patches:
-  - target:
-      kind: ApplicationSet
-      name: platform
-    patch: |
-      - op: replace
-        path: /spec/generators/0/matrix/generators/0/list/elements
-        value:
-        - component: argocd
-        - component: cert-manager
-        - component: external-secrets
-        - component: monitoring
-          overrideValues:
-          - platform/monitoring/values.yaml
-        - component: gateway-controller
-        - component: namespaces
-        - component: policy
-          namespaceOverride: atlas-ml
-        - component: gateway-resources
-      - op: replace
-        path: /spec/generators/0/matrix/generators/1/git/values/clusterPath
-        value: clusters/local/kind/kind-platform
+  - ../../../../../catalog/platform/argocd
