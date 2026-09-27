@@ -122,160 +122,46 @@ Open `http://localhost:8501`. If the child is missing, check the root's source p
 revision, and sync status. If Pods are not ready, inspect Pod events and image-pull
 errors. Do not trigger chaos operations as part of bootstrap verification.
 
-## Other cluster examples
+## Market example
 
-For local kind, follow [local kind bootstrap](local-kind.md).
-The remaining instructions apply to the market example, not the
-Terraform-owned `all-apps` setup above.
-
-## Prerequisites
-
-Start with an existing Kubernetes cluster, its explicit kubeconfig context, kubectl, and the
-Argo CD CLI. Helm is required only for Helm-based installations. Kubernetes 1.32 is the rendering baseline used by validation, not a tested compatibility
-promise for every managed cluster version. Confirm each pinned chart supports your cluster version.
-Allow outbound chart and Git access. Configure Argo CD repository credentials through a secure
-channel if this repository is private. Never commit credentials.
-
-Merge the configuration to `main` before bootstrap, or consistently change root and child revisions
-to a review branch. All repository sources use `https://github.com/RyanJKS/platform-gitops.git`;
-update every occurrence if using a fork.
-
-Run commands from the repository root.
-
-## Choose a cluster and installation method
-
-Terraform provisions AKS and installs Argo CD through the Azure extension. On the
-Azure dev clusters, verify that extension-managed Argo CD is ready; do not install
-another Helm release or sync `platform-argocd`. These clusters omit the `argocd` component
-and do not reconcile extension-owned ConfigMaps.
-
-The repository is public, so no repository credential Secret is required.
-Bootstrap must run against the intended Kubernetes context. Each root targets the
-in-cluster API; its manifest does not select or register a remote cluster.
-
-Before bootstrap, verify that the installed ApplicationSet controller supports Go
-templates, `templatePatch`, matrix generators, and `preserveResourcesOnDeletion`.
-It must honor `spec.syncPolicy.applicationsSync: create-update`: check its effective
-policy and whether per-set policy overrides are enabled. If the controller ignores
-that setting, stop and have the installation owner configure a compatible policy.
-For Azure, make required installation changes through Terraform/the extension's
-supported configuration, never a GitOps-managed Argo CD ConfigMap or replacement
-Helm release. No controller installation changes are made by this repository refactor.
-
-Set `CONTEXT` to the intended kubeconfig context and choose exactly one pair:
+Local kind has its own [bootstrap and migration guide](local-kind.md).
+The remaining Azure market root selects only its namespace, workload AppProject,
+and API/worker Applications. Terraform must already provide Argo CD. From the
+repository root, after changes reach `main`:
 
 ```sh
-# Azure dev market (extension-managed)
 CLUSTER=clusters/azure/DEV-JKS/dev/eus2/spoke-atlas/aks-atlas-market
-ROOT=azure-dev-uksouth-atlas-market
-
-```
-
-The Azure directories and cluster overlays identify `eus2`. Earlier root and child
-source paths incorrectly used nonexistent `uksouth` directories. Paths now use
-`eus2`; existing Application names retain `uksouth` to preserve their identity.
-This does not change the location of any cloud resource. AWS has reserved files
-only and no root to apply.
-
-There is no bootstrap script. From the repository root, apply only the selected
-cluster's initial root after verifying the context:
-
-```sh
-kubectl --context "$CONTEXT" cluster-info
 kubectl --context "$CONTEXT" apply -f "$CLUSTER/bootstrap/root.yaml"
-kubectl --context "$CONTEXT" -n argocd port-forward service/argocd-server 8080:443 &
-PORT_FORWARD_PID=$!
 ```
 
-`argocd/kustomization.yaml` selects projects and children, never `bootstrap/root.yaml`.
-Roots do not manage themselves. Keep their revisions aligned with child revisions.
-
-Keep this shell open. Log in with `argocd login localhost:8080` and the
-bootstrap administrator credentials. The initial certificate is self-signed; inspect it before
-accepting the CLI's certificate prompt. Retrieve the initial password through your normal secure
-operator workflow. Rotate the bootstrap password and configure access controls before sharing access.
-
-## Reconcile in order
-
-If the cluster was bootstrapped before the directory rename, reapply its matching root manifest after
-the new paths reach the tracked Git revision. This updates the root's source path. Sync the root to
-update child Application paths before syncing children. Root and child Application names remain the
-same; do not delete and recreate them for a directory move.
-
-If an Azure cluster already has a `platform-argocd` Application from the old bundle,
-removing it from Git does not delete it: root pruning remains disabled. Review its
-live ownership and finalizers before retiring that obsolete Application without
-cascading deletion. Do not prune or delete extension-owned Argo CD resources.
-
-1. Sync the root with `argocd app sync "$ROOT"`. Verify AppProjects and child Applications appear.
-   A root sync does not sync its children; sync waves are not a dependency scheduler here.
-2. Sync `platform-namespaces`, then wait for its sync to complete.
-3. Sync `platform-cert-manager`, `platform-external-secrets`, `platform-monitoring`, and
-   `platform-gateway-controller`. Wait for controllers, webhooks, and CRDs to become ready.
-4. Sync `platform-policy`, then `platform-gateway-resources`. Confirm the GatewayClass is accepted
-   and the Gateway is programmed.
-5. Follow [onboarding](onboarding-an-application.md) to configure workload images and replicas before
-   syncing `atlas-ml-inference` or the dedicated cluster's `atlas-market-api` and `atlas-market-worker`.
-
-
-For example, sync and wait for a controller with:
-
-```sh
-argocd app sync platform-cert-manager
-argocd app wait platform-cert-manager --sync --health --timeout 300
-```
-
-The intended result is synced Applications with healthy controllers. Zero-replica workloads do not
-serve traffic. HTTPRoutes use example DNS names; configure DNS and TLS separately before real use.
-If a sync reports a missing custom resource kind, confirm the owning controller's CRDs are established,
-then refresh and retry the dependent Application. See [recovery](recovery.md) for other failures.
-
-After finishing, stop the background port-forward with `kill "$PORT_FORWARD_PID"`.
+The root retains the legacy name `azure-dev-uksouth-atlas-market` despite its `eus2`
+source path. Verify the intended context; naming does not move cloud resources.
+Sync the root without pruning, then sync the workload Applications after configuring
+real images and replicas. They retain manual sync and zero-replica example defaults.
+The API HTTPRoute requires externally supplied Gateway API CRDs and a compatible
+Gateway/controller. The removed platform bundles no longer provide these resources.
 
 ## Migrate existing platform Applications
 
-Do this handover once per already-bootstrapped cluster. Offline rendering proves
-manifest compatibility, not controller adoption. Keep the previous Git revision
-available and perform the checks below in the intended context.
+The platform ApplicationSet and its catalog bundles have been removed. Before
+syncing a previously deployed market root, inspect its tracked resources, the old
+`platform` ApplicationSet, child Applications, owner references, and finalizers.
+Keep pruning disabled during this review. The old ApplicationSet may still control
+children even though it is no longer selected in Git.
 
-1. Before root sync, save the existing platform Applications, UIDs, owner references,
-   finalizers, and Argo CD tracking annotations/labels. Confirm no other
-   ApplicationSet already owns them. This repository previously supplied no
-   deletion finalizers; investigate any live differences before proceeding.
-2. Confirm the ApplicationSet controller honors `create-update` as described above.
-   Merge catalog component inputs and cluster selections together to the tracked
-   `main` revision. The Git-file generator reads the remote revision, not a local
-   checkout. Public repository access requires no credential Secret.
-3. Sync the root **without pruning**. The root now manages the `platform`
-   ApplicationSet instead of the platform Application manifests. Existing
-   Applications must remain present while the controller adopts matching names.
-   Wait for ApplicationSet conditions to report successful parameter generation
-   and updates. Check every Application retains its original UID, spec, namespace,
-   and annotations, and gains an owner reference to this cluster's `platform`
-   ApplicationSet. A recreated UID is a failed handover, not a successful adoption.
-4. Verify no generated Application has acquired a resource-deletion finalizer.
-   `preserveResourcesOnDeletion: true` requests that behavior; it does not remove
-   an unexpected pre-existing finalizer. Do not delete or prune resources to fix
-   a failed adoption.
-5. After verifying ownership, remove only obsolete **root** resource-tracking
-   annotations/labels from these generated Applications if they remain. Inspect
-   the installation's tracking method and values first: commonly
-   `argocd.argoproj.io/tracking-id`, `argocd.argoproj.io/installation-id`, or the
-   configured instance-label key. Do not remove unrelated labels or the preserved
-   sync-wave annotation. Confirm the root no longer reports those Applications
-   as resources eligible for pruning. Ordinary workload Applications stay root-owned.
-6. Refresh Applications and review diffs before any manual child sync. No workload
-   manifest or effective Helm value change is expected from this handover.
+Retire the old ApplicationSet with orphan propagation only after reviewing its
+live ownership; preserve generated Applications and workloads while deciding their
+fate individually. A resource-deletion finalizer can cause deletion of a child's
+workloads. Namespace deletion can remove unrelated resources. Do not cascade-delete
+an ApplicationSet or namespace bundle as a shortcut for this migration.
 
-If adoption fails, pause root/child syncs and inspect controller conditions and
-ownership conflicts. Restore the prior root resources without pruning. Before
-removing an ApplicationSet, coordinate controller reconciliation and inspect its
-owner references: Kubernetes garbage collection can delete owned Applications
-even when `applicationsSync` prevents generator-driven deletion. Use orphan
-propagation only in an approved recovery procedure, after verifying finalizers;
-never cascade deletion during this migration.
+Market now selects `atlas-market` directly from the shared namespace catalog.
+Before root adoption, detach this namespace from the former `platform-namespaces`
+Application's tracking without deleting it, and retire that former owner so it
+cannot reclaim the namespace. Preserve existing namespace policy labels until
+reviewed separately. Workload AppProject and Application identities remain unchanged.
 
-Removing a component from the list intentionally does not automatically retire
-its Application when `create-update` is honored. Review and explicitly retire the
-Application separately. `preserveResourcesOnDeletion` protects workloads from
-ApplicationSet deletion; it is not a substitute for checking live finalizers.
+Review remaining legacy platform Applications individually. Keep needed live
+services until their replacement or retirement is explicitly planned. Remove the
+old platform AppProject only when no Applications still use it. This repository
+change does not perform any live uninstall, namespace migration, or ownership transfer.

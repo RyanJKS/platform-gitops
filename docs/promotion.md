@@ -18,13 +18,9 @@ change therefore affects every referencing cluster on its next sync. Keep enviro
 rollouts in cluster overlays. For independent promotion of shared definitions, pin all Git sources
 (including `$values`) to reviewed immutable revisions and explicitly advance them per environment.
 
-Chart versions are pinned in `catalog/platform/components/*.yaml`. To upgrade one dev cluster first,
-set `versionOverride` on its component list element, render its values, and review upstream
-upgrade and CRD migration notes. After verification, update the shared default and remove the temporary
-patch, or advance other cluster patches individually.
-A Git revert does not necessarily reverse CRD migrations or restore data; see [recovery](recovery.md).
-
-ApplicationSet reconciliation automatically updates generated Application specs when
-selected catalog component inputs change. Workloads still require manual Application
-sync. Cluster selection and template changes require root sync first. Review shared
-version changes for every consumer; use per-cluster overrides for staged rollout.
+Chart versions are pinned in the direct Applications under `catalog/platform/`.
+Review release compatibility, render the selected charts, and verify readiness
+before promoting a version. Shared values affect every cluster that selects them.
+Root sync updates child Application definitions; each child's own sync policy
+controls workload reconciliation. Do not assume parent sync waves order separate
+child Applications. UK South's chart and issuer instead share one Application.

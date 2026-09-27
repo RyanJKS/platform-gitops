@@ -163,8 +163,9 @@ tracked resources before changing paths or enabling the new selection. Removing
 an AppProject while Applications still use it also requires review. These files do
 not prove what a cluster currently runs; no live ownership was inspected.
 
-Only unused GitHub runner catalog files, bootstrap examples, and their guide were
-removed. No cluster entry point selects them. Monitoring, external-secrets,
-gateways, policy profiles, namespaces, and existing AppProjects remain because
-the market configuration references them. The separate local kind simplification removes its previous platform selections;
-see [local kind migration](local-kind.md#migrate-an-existing-kind-installation). East US 2 legacy files are preserved to avoid changing another cluster.
+The legacy platform catalog bundles and GitHub runner examples have been removed.
+Their obsolete Azure selections and Kustomizations are also removed. Market retains
+its workload Applications, AppProject, and namespace. See
+[legacy migration](bootstrap.md#migrate-existing-platform-applications) before
+syncing an existing market root, and [local kind migration](local-kind.md#migrate-an-existing-kind-installation)
+for the separate local simplification. UK South and chaos-generator are unchanged.

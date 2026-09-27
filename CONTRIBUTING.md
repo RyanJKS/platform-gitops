@@ -31,22 +31,16 @@ quotas, networking, TLS, identities, storage, and operational sizing under the t
 Identical policy values are not a reason to centralize independent cluster decisions.
 Add the feature's validation and operational documentation in the same change.
 
-Manifest validation also requires Go (the version is declared in
-`scripts/render-applications/go.mod`). The offline expander uses pinned Go/Sprig
-libraries to expand the repository's ApplicationSet list/Git-file matrix from the
-checkout, then the existing validator renders the generated Applications' Helm
-and Kustomize sources. It does not contact an Argo CD server. Run its focused tests
-with `cd scripts/render-applications && go test ./...`.
+Manifest validation also requires Go (version declared in
+`scripts/render-applications/go.mod`). This module now contains direct Application
+selection tests; the unused ApplicationSet expander has been removed. Run the tests
+with `cd scripts/render-applications && go test ./...`. The validator renders every
+cluster entry point and selected child source, including roots created by Terraform.
 
-For a single cluster, inspect generated Applications without a cluster connection:
+Inspect a cluster without connecting to Kubernetes:
 
 ```sh
-CLUSTER=clusters/azure/DEV-JKS/dev/eus2/spoke-atlas/aks-atlas-market
-kubectl kustomize "$CLUSTER/argocd" | yq 'select(.kind == "ApplicationSet")' > /tmp/platform-appset.yaml
-(cd scripts/render-applications && go build -o /tmp/render-applications .)
-/tmp/render-applications "$PWD" "$CLUSTER" /tmp/platform-appset.yaml
+kubectl kustomize clusters/azure/DEV-JKS/dev/uks/spoke-atlas/aks-shared/argocd
 ```
 
-Live ApplicationSet generation/adoption and effective controller policy must be
-verified during the documented handover. There is no diff-preview workflow in this
-repository; the existing manifest workflow remains a render-and-validate pipeline.
+Offline validation does not prove live ownership, controller readiness, or DNS.

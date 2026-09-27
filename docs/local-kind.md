@@ -18,7 +18,7 @@ The former platform ApplicationSet, platform/atlas-ml projects, namespace bundle
 cert-manager, external-secrets, monitoring, gateway, and policy selections are
 removed from kind. Market and UK South selections are unchanged. The obsolete
 `components/argocd.yaml` generator input is removed; the direct Application now
-owns that chart pin. Shared catalog resources still used by market remain.
+owns that chart pin. The later legacy catalog cleanup retains market workloads and removes its old platform selections; see [migration](bootstrap.md#migrate-existing-platform-applications).
 
 ## Bootstrap a new cluster
 

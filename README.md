@@ -28,8 +28,11 @@ cert-manager and `letsencrypt-prod`, preserving `chaos-generator`. East US 2 and
 market keep their existing selections. Local kind now has only `argocd/` and
 `applications/`, selects Argo CD only, and uses `bootstrap/local-kind.yaml` for its root.
 See [local kind bootstrap and migration](docs/local-kind.md). Unused GitHub Actions runner examples
-and defaults have been removed. Monitoring, external-secrets, gateway, namespaces,
-and policy remain because the the market configuration references them.
+and defaults have been removed. Legacy monitoring, external-secrets, gateway, namespace-bundle, policy, and
+ApplicationSet scaffolding has been removed. Market retains its workload
+Applications, AppProject, and namespace; Gateway API ingress must be supplied
+separately. Review [legacy migration](docs/bootstrap.md#migrate-existing-platform-applications)
+before syncing a previously deployed root.
 
 ## UK South HTTPS bootstrap
 
@@ -90,7 +93,6 @@ Validation needs network access to chart repositories and Kubernetes schemas. CI
 no Python application or Python development toolchain is maintained here.
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution and documentation checks.
 
-Platform Applications are generated from explicit cluster selections. See
-[adding a cluster or component](docs/adding-a-cluster.md) for examples and
-[bootstrap migration](docs/bootstrap.md#migrate-existing-platform-applications) before
-handing existing Applications to the ApplicationSet controller.
+Platform Applications are selected directly by each cluster entry point. See
+[adding a cluster](docs/adding-a-cluster.md) and the migration guides before changing
+live ownership or enabling pruning.

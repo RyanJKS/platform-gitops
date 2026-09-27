@@ -1,99 +1,53 @@
 # Architecture
 
-The Terraform owns the Azure shared cluster roots and the Microsoft Argo CD extension.
-East US 2 selects only `chaos-generator`. UK South preserves its two-replica chaos
-overlay and adds one cert-manager Application, a dedicated AppProject, and the
-`letsencrypt-prod` ClusterIssuer. The chart and issuer share one sync operation;
-resource waves and the chart's admission-check Job gate issuer creation. See
-[UK South HTTPS](https.md) for versions, ownership, and external configuration.
-
-The ApplicationSet arrangement below applies to the other cluster examples.
-
-## Repository and rendering boundaries
-
-Terraform provisions clusters. Each cluster's own Argo CD instance reconciles
-platform components and business applications from this public repository.
-Application code and image builds live elsewhere.
-
-The market example owns a small `bootstrap/root.yaml`. Local kind uses
-`bootstrap/local-kind.yaml` at repository level, outside its managed entry point. Its full repository-relative
-source path selects the cluster's `argocd/kustomization.yaml`; that entry point
-never includes the root. Azure and AWS retain their cloud/account/environment/
-region/spoke hierarchy. Local kind retains its shorter hierarchy.
-
-Kustomize composes shared AppProjects, one platform ApplicationSet, and unique
-workload Applications. The ApplicationSet uses an explicit list plus Git-file
-matrix: the list chooses component names, the Git generator reads only those
-catalog component files, and its Go template constructs Applications. The cluster
-entry point supplies one `clusterPath`; no folder discovery or implicit path
-parameters are involved. Helm is used only by child Applications to render their
-upstream charts. Kustomize renders resource overlays.
-
-```text
-catalog/platform/
-  applicationsets/platform/    reusable ApplicationSet template
-  components/                 chart versions and component input data
-  projects/platform/          shared platform permission base
-  profiles/starter/            opt-in quota, namespace policy, HTTP Gateway
-  <component>/values.yaml      common Helm defaults
-catalog/applications/<app>/
-  project/                    matching workload permissions
-  namespace/                  namespace identity
-  <component>/base/           reusable workload resources
-clusters/.../<cluster>/
-  bootstrap/root.yaml         initial root, not self-managed
-  argocd/kustomization.yaml   explicit selections and cluster identity
-  argocd/projects/            shared project selection and permission patches
-  argocd/applications/        unique workload Applications, when present
-  platform/                  shared resource selections and value differences
-  applications/              workload images, routes, and runtime overrides
-```
-
-See [configuration boundaries](configuration-boundaries.md) for precedence and
-[adding a cluster](adding-a-cluster.md) for complete examples.
+Terraform provisions Azure clusters and owns the Microsoft Argo CD extension.
+Each Argo CD root selects a cluster's `argocd/kustomization.yaml`. Kustomize renders
+direct Applications and required AppProjects; no ApplicationSet is selected.
+Application source code and image builds live in other repositories.
 
 ## Configured clusters
 
-| Cluster | Generated platform Applications | Workloads | Argo CD owner |
+| Cluster | Platform selection | Workloads | Argo CD owner |
 | --- | --- | --- | --- |
-| Azure `eus2` `aks-shared` | None | Chaos generator | Azure extension |
-| Azure `uks` `aks-shared` | One direct cert-manager Application | Chaos generator | Azure extension |
-| Azure `eus2` `aks-atlas-market` | Seven | Atlas Market API and worker | Azure extension |
-| Local `kind-platform` | One direct Argo CD Application | None | Helm, then GitOps |
-| AWS `eks-shared` | None; reserved | None | Not selected |
+| Azure `uks` `aks-shared` | cert-manager and production issuer | Chaos generator, two replicas | Azure extension |
+| Azure `eus2` `aks-shared` | None | Chaos generator, one replica | Azure extension |
+| Azure `eus2` `aks-atlas-market` | None | Atlas Market API and worker examples | Azure extension |
+| Local `kind-platform` | Argo CD | None | Helm, then GitOps |
+| AWS `eks-shared` | None | None | Not selected |
 
-Legacy Azure root names retain `uksouth` for identity compatibility and use `eus2`
-paths. Terraform-owned `all-apps` can select the `uks` or `eus2` shared variant. This does not move cloud resources. Azure roots do not deploy
-Argo CD or overwrite extension-owned ConfigMaps. AWS remains unconfigured.
+UK South imports `catalog/platform/cert-manager`. One Application combines the
+Helm chart and issuer; a Sync hook checks API admission before applying the issuer.
+See [HTTPS bootstrap](https.md) for versions, DNS, ordering, and external settings.
+Local kind imports `catalog/platform/argocd`; see [local kind](local-kind.md).
 
-## Reconciliation and deletion
+Market retains its workload AppProject and selects the shared `atlas-market`
+namespace directly in its root. The old namespace bundle, policy, gateway,
+monitoring, external-secrets, and cert-manager selections were removed with their
+catalog bundles. Its HTTPRoute still requires externally supplied Gateway API CRDs
+and a compatible Gateway/controller; it is not a complete ingress deployment.
+Workload replicas and images remain unchanged. East US 2's unused Atlas ML files
+remain available but are not selected by its current shared root.
 
-The other cluster examples retain manual sync without workload pruning. Generated Applications have ApplicationSet controller
-owner references after adoption, but no resource-deletion finalizer because
-`preserveResourcesOnDeletion` is true. `applicationsSync: create-update` requests
-no automatic Application deletion on selection removal; the controller must honor
-that per-set policy. See the required [migration procedure](bootstrap.md#migrate-existing-platform-applications).
+## Ownership and deletion
 
-Root sync creates projects, the ApplicationSet, and ordinary Applications. The
-ApplicationSet controller subsequently creates or adopts platform Applications.
-Selected catalog component changes update generated Application specs on ApplicationSet
-reconciliation; this is the intentional control-plane behavior change from ordinary
-root-managed Applications. Workloads still require manual sync. Cluster selection
-and template changes require root sync. Sync waves do not make child Applications sync automatically. Follow the explicit
-order in [bootstrap](bootstrap.md).
+Azure shared roots are Terraform-owned. Market retains its cluster bootstrap root;
+local kind uses `bootstrap/local-kind.yaml` outside its cluster tree. Roots never
+include themselves in their managed Kustomizations. Helm renders upstream charts
+inside child Applications; it does not independently manage an Argo CD release.
 
-## Validation and limits
+Removing a Git selection does not prove that live resources have been removed.
+Legacy ApplicationSets can continue managing their Applications until retired.
+Review root pruning, owner references, finalizers, and namespace ownership before
+migration. See [legacy migration](bootstrap.md#migrate-existing-platform-applications).
+No cluster adoption or deletion is performed by repository validation.
 
-CI builds Kustomize entry points, expands this repository's list/Git-file matrix
-against the checkout using Go templates and Sprig, verifies selection scope, and
-renders pinned Helm charts with effective values. The offline expander supports
-only this declared generator shape and fails on unsupported input. It does not
-contact Argo CD or prove live adoption, owner references, controller policy flags,
-or reconciliation against the remote Git revision. Argo CD and Gateway API schemas
-remain excluded from kubeconform. TechDocs builds separately in strict mode.
+## Validation
 
-Other example images and DNS names remain placeholders, with zero workload replicas.
-Chaos generator uses its upstream image, with one replica in `eus2` and two in
-`uks`; runtime is unverified.
-Live TLS issuance, cloud identity, persistence, network isolation, and recovery require cluster
-implementation and runtime validation before production use.
+`scripts/validate.sh` tests direct root selections, renders every Kustomization,
+checks root and child paths, and renders selected Helm charts. The old Go
+ApplicationSet expander and its catalog-dependent tests were removed. The retained
+Go test module checks current Azure and local roots. Cert-manager checks cover
+issuer schema, hook ordering, and AppProject permissions.
+
+CI builds TechDocs separately. Offline checks cannot prove cluster health, live
+ownership, DNS, certificate issuance, or HTTPRoute readiness.

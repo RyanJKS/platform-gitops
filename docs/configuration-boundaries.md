@@ -1,79 +1,42 @@
 # Configuration boundaries
 
-The catalog supplies reusable definitions. A cluster explicitly selects components,
-projects, and optional policy profiles, then supplies only its differences. A folder
-name does not become a template variable or grant permission.
+Keep reusable manifests and Helm defaults in `catalog/`. Keep cluster selections
+and workload overrides under `clusters/`. A directory name does not grant access
+or implicitly select a deployment.
 
-The Terraform owns the Azure shared cluster roots and the Microsoft Argo CD extension.
-East US 2 selects only `chaos-generator`. UK South preserves its two-replica chaos
-overlay and adds one cert-manager Application, a dedicated AppProject, and the
-`letsencrypt-prod` ClusterIssuer. The chart and issuer share one sync operation;
-resource waves and the chart's admission-check Job gate issuer creation. See
-[UK South HTTPS](https.md) for versions, ownership, and external configuration.
+- `catalog/platform/cert-manager/` contains the direct Application, AppProject,
+  Helm values, and issuer used by UK South.
+- `catalog/platform/argocd/` contains the direct Application and Helm values used
+  by local kind. Azure never selects this installation.
+- `catalog/applications/` contains reusable workloads, namespaces, and AppProjects.
+- Cluster `argocd/kustomization.yaml` files explicitly select direct Applications,
+  AppProjects, and required namespaces.
+- Cluster `applications/` directories contain workload image, replica, and routing
+  overrides. Local kind currently has no workload selection.
 
-The ApplicationSet arrangement below applies to the other cluster examples.
+The deleted platform ApplicationSet, component inputs, and starter profiles are
+no longer configuration interfaces. Add only resources needed by a selected
+cluster; do not recreate speculative platform bundles.
 
-## Ownership and precedence
+## Installation ownership
 
-- `catalog/platform/components/` holds component inputs: existing names, chart
-  repositories, pinned versions, releases, destination namespaces, and source paths.
-- `catalog/platform/applicationsets/platform/` holds one reusable ApplicationSet
-  template. It selects nothing until a cluster patches its list and cluster path.
-- `catalog/platform/projects/` and `catalog/applications/*/project/` hold matching
-  permission definitions. Cluster `argocd/projects/kustomization.yaml` adds only
-  the appropriate workload destination to the platform project. Workload projects
-  remain distinct; their permissions have not broadened.
-- `catalog/platform/profiles/starter/` holds explicitly selected existing quota,
-  HTTP Gateway, and namespace policy. These are starter choices, not production
-  guarantees. Clusters can omit a profile or patch it without affecting others.
-- `clusters/.../argocd/` selects components and projects. Unique workload Applications
-  remain in `applications/`; shared platform Applications are generated.
-- Cluster `platform/` and `applications/` hold resource selections and overrides.
-  Initial roots remain at `bootstrap/root.yaml`, outside their own managed resources.
+Terraform owns Azure shared roots and the Argo CD extension, including its Ingress
+and ConfigMaps. Configure those resources through the extension's supported
+Terraform settings. Cert-manager owns generated ACME and certificate Secrets.
 
-ApplicationSet list inputs take precedence through the supported `versionOverride`,
-`namespaceOverride`, and `overrideValues` fields. Other component fields come from
-one catalog input. `clusterPath` is supplied once in the cluster's ApplicationSet
-patch; it prefixes local Kustomize paths and override value paths.
+Local kind retains its Helm-to-GitOps handover and a root stored at
+`bootstrap/local-kind.yaml`. Market retains its bootstrap root and workload
+AppProject. Its namespace is selected directly by the root, not by the deleted
+platform namespace Application. Review live ownership before adopting that namespace.
 
-Helm loads the shared `defaultValues` file first, then each cluster-relative file
-in `overrideValues`, in order. Later values win. Shared monitoring defaults retain
-one Alertmanager replica, three-day retention, and Prometheus requests of 100m CPU
-and 512Mi memory. Kind overrides only memory to 256Mi. Shared Gateway defaults
-retain one replica. Chart versions remain unchanged; `versionOverride` permits a
-staged cluster-specific upgrade.
+## Values and permissions
 
-Kustomize bases and components load before cluster patches. Existing clusters
-explicitly select the starter profile: restricted Pod Security at `v1.30`, the
-existing workload budget, and an HTTP listener accepting labeled namespaces.
-The namespace component targets only `atlas-ml` and `atlas-market`. Review or
-extend that target when introducing another workload namespace. AppProjects are
-permission boundaries, not mirrors of subscriptions, environments, or regions.
+A chart's Application pins its version and lists shared Helm values. Later value
+files override earlier ones. UK South adds Argo CD startup-hook values after the
+shared CRD setting. Cluster-specific values belong under that cluster only when
+there is a real difference; point the Application at those files explicitly.
 
-## Cluster selection and installation ownership
-
-The ApplicationSet matrix starts with the cluster's explicit component list. For
-each entry, its Git-file generator reads exactly
-`catalog/platform/components/{{ .component }}.yaml` from this public repository.
-It never scans cluster directories. The cluster entry point patches the generator's
-`values.clusterPath`; the Go template reads it as `.values.clusterPath`.
-
-Azure clusters omit `argocd`. Terraform's Azure extension owns their Argo CD
-installation, including ConfigMaps. Kind imports
-`catalog/platform/argocd` directly and retains its existing Helm-to-GitOps handover.
-The local layout changes do not change its initial installation method.
-
-Review shared catalog changes as changes to every consumer. Shared policies are
-opt-in and versioned with Git; matching values alone do not justify merging
-separate security boundaries. Keep credentials, cloud identities, TLS choices,
-network isolation, persistent storage, and recovery decisions under their owners.
-
-## Local kind
-
-The local cluster contains only `argocd/` and `applications/`. Its entry point
-imports one direct Argo CD Application, using the existing chart, release, values,
-and manual sync policy. The root lives at `bootstrap/local-kind.yaml` and does not
-manage itself. No platform ApplicationSet, workload namespace, AppProject, policy,
-or gateway is selected. Workload overlays belong in `applications/`; add their
-child Application manifests to the `argocd/` Kustomization when needed. See
-[local kind bootstrap](local-kind.md), including migration from the old selections.
+Keep workload AppProjects narrow. Include namespaces and permissions required by
+new workloads rather than relying on the former platform namespace bundle.
+Shared catalog changes affect every selected consumer. Review those consumers
+before changing shared policies or values, and never commit generated secrets.
