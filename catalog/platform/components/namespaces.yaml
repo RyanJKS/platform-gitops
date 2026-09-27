@@ -1,0 +1,5 @@
+name: platform-namespaces
+type: kustomize
+wave: '-3'
+namespace: argocd
+resourcePath: platform/namespaces

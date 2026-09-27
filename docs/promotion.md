@@ -18,8 +18,13 @@ change therefore affects every referencing cluster on its next sync. Keep enviro
 rollouts in cluster overlays. For independent promotion of shared definitions, pin all Git sources
 (including `$values`) to reviewed immutable revisions and explicitly advance them per environment.
 
-Chart versions are pinned in the shared default Applications. To upgrade one dev cluster first,
-patch its chart version in the cluster's Argo CD Kustomization, render its values, and review upstream
+Chart versions are pinned in `catalog/platform/components/*.yaml`. To upgrade one dev cluster first,
+set `versionOverride` on its component list element, render its values, and review upstream
 upgrade and CRD migration notes. After verification, update the shared default and remove the temporary
 patch, or advance other cluster patches individually.
 A Git revert does not necessarily reverse CRD migrations or restore data; see [recovery](recovery.md).
+
+ApplicationSet reconciliation automatically updates generated Application specs when
+selected catalog component inputs change. Workloads still require manual Application
+sync. Cluster selection and template changes require root sync first. Review shared
+version changes for every consumer; use per-cluster overrides for staged rollout.

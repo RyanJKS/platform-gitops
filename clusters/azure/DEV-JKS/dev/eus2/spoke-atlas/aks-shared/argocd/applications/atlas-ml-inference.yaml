@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://github.com/RyanJKS/platform-gitops.git
     targetRevision: main
-    path: clusters/azure/DEV-JKS/dev/uksouth/spoke-atlas/aks-shared/applications/atlas-ml/inference
+    path: clusters/azure/DEV-JKS/dev/eus2/spoke-atlas/aks-shared/applications/atlas-ml/inference
   destination:
     server: https://kubernetes.default.svc
     namespace: atlas-ml

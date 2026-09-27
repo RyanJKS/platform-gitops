@@ -1,72 +1,59 @@
 # Configuration boundaries
 
-This repository is a starting platform configuration, not a complete production security policy.
-Keep reusable installation mechanics in the catalog. Make deployment and policy decisions explicit
-in each cluster. Missing production settings are future cluster work, not implicit shared guarantees.
+The catalog supplies reusable definitions. A cluster explicitly selects components,
+projects, and optional policy profiles, then supplies only its differences. A folder
+name does not become a template variable or grant permission.
 
-## Where changes belong
+## Ownership and precedence
 
-| Layer | Owns | Does not own |
-| --- | --- | --- |
-| `bootstrap/roots/` | The mapping from one cluster to its Argo CD configuration | Infrastructure creation or workload policy |
-| `catalog/platform/` | Common chart versions, controller installation values, namespace identities, reusable controller resources | Cluster access grants, listener exposure, TLS, resource budgets, identity bindings |
-| `catalog/applications/` | Application namespace identities and portable workload contracts such as container names and service ports | Environment image releases, replicas, routing, credentials, cloud identities |
-| `clusters/.../argocd/` | Capability selection, AppProjects, destinations, repository permissions, Applications and patches | Application source code or cluster provisioning |
-| `clusters/.../platform/` | Namespace policy, quotas, controller sizing, gateways, TLS, storage, secret stores and cluster identity configuration | Secret values or cloud infrastructure state |
-| `clusters/.../applications/` | Workload image versions, runtime overrides, replicas, routes and dependency configuration | Shared controller installation defaults |
+- `catalog/platform/components/` holds component inputs: existing names, chart
+  repositories, pinned versions, releases, destination namespaces, and source paths.
+- `catalog/platform/applicationsets/platform/` holds one reusable ApplicationSet
+  template. It selects nothing until a cluster patches its list and cluster path.
+- `catalog/platform/projects/` and `catalog/applications/*/project/` hold matching
+  permission definitions. Cluster `argocd/projects/kustomization.yaml` adds only
+  the appropriate workload destination to the platform project. Workload projects
+  remain distinct; their permissions have not broadened.
+- `catalog/platform/profiles/starter/` holds explicitly selected existing quota,
+  HTTP Gateway, and namespace policy. These are starter choices, not production
+  guarantees. Clusters can omit a profile or patch it without affecting others.
+- `clusters/.../argocd/` selects components and projects. Unique workload Applications
+  remain in `applications/`; shared platform Applications are generated.
+- Cluster `platform/` and `applications/` hold resource selections and overrides.
+  Initial roots remain at `bootstrap/root.yaml`, outside their own managed resources.
 
-Application base resource requests and non-root execution settings are starter workload defaults, not
-enterprise policy. Override them when the actual application's runtime requirements are known. Platform
-controller sizing and namespace budgets are cluster decisions and therefore already live under `clusters/`.
+ApplicationSet list inputs take precedence through the supported `versionOverride`,
+`namespaceOverride`, and `overrideValues` fields. Other component fields come from
+one catalog input. `clusterPath` is supplied once in the cluster's ApplicationSet
+patch; it prefixes local Kustomize paths and override value paths.
 
-## Shared means portable, not mandatory
+Helm loads the shared `defaultValues` file first, then each cluster-relative file
+in `overrideValues`, in order. Later values win. Shared monitoring defaults retain
+one Alertmanager replica, three-day retention, and Prometheus requests of 100m CPU
+and 512Mi memory. Kind overrides only memory to 256Mi. Shared Gateway defaults
+retain one replica. Chart versions remain unchanged; `versionOverride` permits a
+staged cluster-specific upgrade.
 
-The shared Argo CD bundle installs five controller Applications. It does not supply a platform
-AppProject or a Gateway listener. Each cluster supplies those resources explicitly. The shared
-GatewayClass identifies Envoy's controller; the cluster Gateway defines exposure and route attachment.
+Kustomize bases and components load before cluster patches. Existing clusters
+explicitly select the starter profile: restricted Pod Security at `v1.30`, the
+existing workload budget, and an HTTP listener accepting labeled namespaces.
+The namespace component targets only `atlas-ml` and `atlas-market`. Review or
+extend that target when introducing another workload namespace. AppProjects are
+permission boundaries, not mirrors of subscriptions, environments, or regions.
 
-Shared Namespace manifests contain names only. Cluster namespace patches select Pod Security Admission
-labels and route eligibility. Quota amounts are defined directly in each cluster's policy directory.
-Monitoring retention, resource requests, and controller replica counts are also cluster values.
+## Cluster selection and installation ownership
 
-As namespace configuration grows, group cluster-owned resources under
-`platform/namespaces/<namespace>/` with its own `kustomization.yaml`. That group can reference the
-catalog Namespace and include namespace-specific patches, Roles, and RoleBindings. Keep subjects and
-access grants local unless they form an intentionally shared policy. ClusterRoles and ClusterRoleBindings
-are cluster-scoped and belong with the relevant capability or cluster policy, not a namespace group.
-Ensure only one Application owns each resource when splitting groups.
+The ApplicationSet matrix starts with the cluster's explicit component list. For
+each entry, its Git-file generator reads exactly
+`catalog/platform/components/{{ .component }}.yaml` from this public repository.
+It never scans cluster directories. The cluster entry point patches the generator's
+`values.clusterPath`; the Go template reads it as `.values.clusterPath`.
 
-The existing dev and kind clusters deliberately repeat a few policy settings. These are independent
-choices that happen to match today. Do not centralize them merely because their YAML is identical.
-If several clusters later adopt a maintained policy with the same owner and rollout lifecycle, introduce
-an explicit opt-in profile. Document its consumers and allow clusters to override or version it.
+Azure clusters omit `argocd`. Terraform's Azure extension owns their Argo CD
+installation, including ConfigMaps. Kind selects `argocd` and retains the existing
+Helm-to-GitOps handover. No installation method changes in this refactor.
 
-## Adding cluster-specific behavior
-
-1. Put the resource or values file under the target cluster's `platform/` or `applications/` directory.
-2. Include it in that cluster's Kustomization, or append the values file to the relevant Helm Application
-   with an Argo CD Kustomize patch. Shared values load first and cluster values load last.
-3. Update that cluster's AppProject permissions only if the new resource or destination requires them.
-4. Add validation appropriate to the behavior. The current checks render manifests and validate built-in
-   Kubernetes schemas; they do not verify cloud access, network reachability, TLS issuance, or recovery.
-5. Update the relevant operational guide and record any prerequisites before enabling the capability.
-
-For example, configure a TLS listener under `platform/gateway/resources/`, include the issuer/certificate
-resources in an appropriate Application, and grant only the required project access. Installing
-cert-manager alone does not configure certificates. Configure a secret store and workload identity
-before adding ExternalSecret consumers; never put secret values in Git.
-
-## Work to complete before a cluster serves production traffic
-
-The cluster owner decides and implements:
-
-- Operator SSO/RBAC, AppProject permissions, repository access, and workload identity bindings.
-- Network isolation, Gateway exposure, DNS, TLS, and permitted route namespaces.
-- Resource budgets, controller availability, storage classes, persistence, and backup/restore procedures.
-- Monitoring retention, alert routing, service objectives, and incident access.
-- Image releases, runtime settings, promotion rules, and cluster-specific integration or policy checks.
-
-The supplied platform projects remain broad starter administrator permissions. Their location makes
-that choice visible per cluster; moving the files does not harden them. The supplied HTTP Gateways and
-namespace policies likewise preserve the existing starter behavior. AWS and Azure production remain
-unconfigured scaffolds until their owners implement the required settings.
+Review shared catalog changes as changes to every consumer. Shared policies are
+opt-in and versioned with Git; matching values alone do not justify merging
+separate security boundaries. Keep credentials, cloud identities, TLS choices,
+network isolation, persistent storage, and recovery decisions under their owners.

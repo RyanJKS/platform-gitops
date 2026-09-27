@@ -1,0 +1,9 @@
+name: platform-cert-manager
+type: helm
+wave: '-2'
+namespace: cert-manager
+repoURL: https://charts.jetstack.io
+chart: cert-manager
+version: v1.17.2
+releaseName: cert-manager
+defaultValues: $values/catalog/platform/cert-manager/values.yaml

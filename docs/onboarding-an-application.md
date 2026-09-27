@@ -13,7 +13,7 @@ their deployment. Do not add application source code or image-build workflows he
    patch those defaults. The worker deliberately has no Service or HTTPRoute.
 4. Define the namespace name once in `catalog/applications/<application>/namespace/`, then reference it
    from each target cluster's `platform/namespaces/kustomization.yaml`. Set namespace security labels
-   in a cluster patch, set quota amounts under the cluster's `platform/policy/`, and create a workload AppProject.
+   in a cluster patch, set quota amounts under the cluster's `platform/policy/`, and select or create a shared workload AppProject with matching permissions.
    Grant only required namespaced resource kinds. ConfigMaps or secret resources need explicit
    AppProject permissions if added later. Keep secret values outside Git.
 5. Add the component Application to `argocd/applications/` and list it in `argocd/kustomization.yaml`.

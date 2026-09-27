@@ -1,13 +1,9 @@
 # Cluster bootstrap
 
-Apply exactly one root to the matching cluster after installing Argo CD.
-Each root targets the in-cluster Kubernetes API; it does not register or select a remote cluster.
+Shared examples and instructions live here. Each configured cluster owns its initial
+`bootstrap/root.yaml`; reusable definitions stay in `catalog/platform/` and
+`catalog/applications/`.
 
-| Root | Cluster | Workloads |
-| --- | --- | --- |
-| `azure-dev-uksouth-atlas-shared.yaml` | Azure dev `aks-shared` | Atlas ML inference |
-| `azure-dev-uksouth-atlas-market.yaml` | Azure dev `aks-atlas-market` | Atlas Market API and worker |
-| `local-kind.yaml` | Local `kind-platform` | None |
-
-Follow the complete [bootstrap procedure](../docs/bootstrap.md), including manual sync order.
-Do not apply the whole roots directory. Roots intentionally omit automated sync and deletion finalizers.
+Follow the [bootstrap procedure](../docs/bootstrap.md) for exact paths, installation
+methods, context selection, and sync order. Apply only the chosen cluster's root.
+Public repositories require no repository credential Secret.

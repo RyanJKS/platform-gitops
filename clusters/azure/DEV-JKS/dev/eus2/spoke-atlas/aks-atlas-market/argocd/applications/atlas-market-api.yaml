@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://github.com/RyanJKS/platform-gitops.git
     targetRevision: main
-    path: clusters/azure/DEV-JKS/dev/uksouth/spoke-atlas/aks-atlas-market/applications/atlas-market/api
+    path: clusters/azure/DEV-JKS/dev/eus2/spoke-atlas/aks-atlas-market/applications/atlas-market/api
   destination:
     server: https://kubernetes.default.svc
     namespace: atlas-market

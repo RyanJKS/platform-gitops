@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-for tool in yq kubectl helm kubeconform; do
+for tool in yq kubectl helm kubeconform go; do
   command -v "$tool" >/dev/null || { echo "Missing required tool: $tool" >&2; exit 1; }
 done
 output=$(mktemp -d)
 trap 'rm -rf "$output"' EXIT
+(cd scripts/render-applications && go test ./... && go build -o "$output/render-applications" .)
 while IFS= read -r file; do
   yq eval '.' "$file" >/dev/null
 done < <(find bootstrap catalog clusters .github -type f -name '*.yaml' | sort)
@@ -13,19 +14,28 @@ for file in mkdocs.yml catalog-info.yaml; do yq eval '.' "$file" >/dev/null; don
 count=0
 while IFS= read -r file; do
   kubectl kustomize "$(dirname "$file")" > "$output/rendered.yaml"
-  kubeconform -kubernetes-version 1.32.0 -strict -summary -skip Application,AppProject,GatewayClass,Gateway,HTTPRoute "$output/rendered.yaml"
+  kubeconform -kubernetes-version 1.32.0 -strict -summary -skip Application,ApplicationSet,AppProject,GatewayClass,Gateway,HTTPRoute "$output/rendered.yaml"
   count=$((count + 1))
 done < <(find bootstrap catalog clusters -name kustomization.yaml | sort)
 while IFS= read -r file; do
   source_path=$(yq -r '.spec.source.path' "$file")
+  test "$source_path" = "$(dirname "$(dirname "$file")")/argocd"
   test -f "$source_path/kustomization.yaml"
   root_name=$(yq -r '.metadata.name' "$file")
   kubectl kustomize "$source_path" > "$output/root.yaml"
+  cluster=$(dirname "$(dirname "$file")")
+  cp "$output/root.yaml" "$output/applications.yaml"
+  while IFS= read -r set_name; do
+    SET_NAME="$set_name" yq 'select(.kind == "ApplicationSet" and .metadata.name == strenv(SET_NAME))' \
+      "$output/root.yaml" > "$output/applicationset.yaml"
+    "$output/render-applications" "$PWD" "$cluster" "$output/applicationset.yaml" > "$output/generated.yaml"
+    cat "$output/generated.yaml" >> "$output/applications.yaml"
+  done < <(yq -N -r 'select(.kind == "ApplicationSet") | .metadata.name' "$output/root.yaml")
   while IFS= read -r app_name; do
     APP_NAME="$app_name" yq 'select(.kind == "Application" and .metadata.name == strenv(APP_NAME))' \
-      "$output/root.yaml" > "$output/app-$root_name-$app_name.yaml"
-  done < <(yq -N -r 'select(.kind == "Application") | .metadata.name' "$output/root.yaml")
-done < <(find bootstrap/roots -name '*.yaml' | sort)
+      "$output/applications.yaml" > "$output/app-$root_name-$app_name.yaml"
+  done < <(yq -N -r 'select(.kind == "Application") | .metadata.name' "$output/applications.yaml")
+done < <(find clusters -path '*/bootstrap/root.yaml' | sort)
 while IFS= read -r file; do
   cp "$file" "$output/app-example-$(basename "$file")"
 done < <(find bootstrap/examples -path '*/argocd/applications/*.yaml' | sort)

@@ -3,5 +3,5 @@ kind: Kustomization
 resources:
 - ../../../../../../catalog/platform/namespaces/base
 - ../../../../../../catalog/applications/atlas-ml/namespace
-patches:
-- path: workload-policy-patch.yaml
+components:
+- ../../../../../../catalog/platform/profiles/starter/workload-namespace

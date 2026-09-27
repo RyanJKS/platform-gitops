@@ -1,2 +1,12 @@
 grafana:
   enabled: false
+alertmanager:
+  alertmanagerSpec:
+    replicas: 1
+prometheus:
+  prometheusSpec:
+    retention: 3d
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi

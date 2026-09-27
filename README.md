@@ -5,8 +5,9 @@ Cluster provisioning, application source code, and image builds belong in other 
 
 ## Layout
 
-- `bootstrap/roots/`: one root Application per configured cluster.
-- `catalog/platform/`: shared controller defaults, namespace identities, Helm values, and gateway controller resources.
+- `bootstrap/`: shared bootstrap instructions and examples.
+- `clusters/.../bootstrap/root.yaml`: one root Application per configured cluster.
+- `catalog/platform/`: component inputs, an ApplicationSet template, matching permission bases, optional policy profiles, and shared Helm values.
 - `catalog/applications/`: reusable workload bases.
 - `clusters/`: explicit cloud, subscription/account alias, environment, region, spoke, and cluster configuration; only differences live here.
 - `docs/`: architecture and operational guides.
@@ -15,9 +16,8 @@ Cluster provisioning, application source code, and image builds belong in other 
 Cluster paths identify their deployment target directly:
 
 ```text
-clusters/azure/DEV-JKS/dev/uksouth/spoke-atlas/aks-shared/
-clusters/azure/DEV-JKS/dev/uksouth/spoke-atlas/aks-atlas-market/
-clusters/azure/DEV-JKS/prod/uksouth/spoke-atlas/aks-shared/
+clusters/azure/DEV-JKS/dev/eus2/spoke-atlas/aks-shared/
+clusters/azure/DEV-JKS/dev/eus2/spoke-atlas/aks-atlas-market/
 clusters/aws/personal-account/dev/eu-west-2/spoke-atlas/eks-shared/
 clusters/local/kind/kind-platform/
 ```
@@ -48,3 +48,8 @@ Validation needs network access to chart repositories and Kubernetes schemas. CI
 [validate.yaml](.github/workflows/validate.yaml) and builds TechDocs using a container;
 no Python application or Python development toolchain is maintained here.
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution and documentation checks.
+
+Platform Applications are generated from explicit cluster selections. See
+[adding a cluster or component](docs/adding-a-cluster.md) for examples and
+[bootstrap migration](docs/bootstrap.md#migrate-existing-platform-applications) before
+handing existing Applications to the ApplicationSet controller.

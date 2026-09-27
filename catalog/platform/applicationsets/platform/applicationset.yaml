@@ -1,0 +1,62 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: platform
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: [missingkey=error]
+  generators:
+    - matrix:
+        generators:
+          - list:
+              elements: []
+          - git:
+              repoURL: https://github.com/RyanJKS/platform-gitops.git
+              revision: main
+              files:
+                - path: 'catalog/platform/components/{{ .component }}.yaml'
+              values:
+                clusterPath: CLUSTER_NOT_SELECTED
+  syncPolicy:
+    applicationsSync: create-update
+    preserveResourcesOnDeletion: true
+  template:
+    metadata:
+      name: '{{ .name }}'
+      namespace: argocd
+      annotations:
+        argocd.argoproj.io/sync-wave: '{{ .wave }}'
+    spec:
+      project: platform
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{ default .namespace (get . "namespaceOverride") }}'
+      syncPolicy:
+        syncOptions:
+          - ServerSideApply=true
+  templatePatch: |
+    spec:
+    {{- if eq .type "helm" }}
+      sources:
+        - repoURL: {{ .repoURL | toJson }}
+          chart: {{ .chart | toJson }}
+          targetRevision: {{ default .version (get . "versionOverride") | toJson }}
+          helm:
+            releaseName: {{ .releaseName | toJson }}
+            valueFiles:
+              - {{ .defaultValues | toJson }}
+              {{- range (get . "overrideValues" | default list) }}
+              - {{ printf "$values/%s/%s" $.values.clusterPath . | toJson }}
+              {{- end }}
+        - repoURL: https://github.com/RyanJKS/platform-gitops.git
+          targetRevision: main
+          ref: values
+    {{- else if eq .type "kustomize" }}
+      source:
+        repoURL: https://github.com/RyanJKS/platform-gitops.git
+        targetRevision: main
+        path: {{ printf "%s/%s" .values.clusterPath .resourcePath | toJson }}
+    {{- else }}
+      {{ fail "unknown component type" }}
+    {{- end }}

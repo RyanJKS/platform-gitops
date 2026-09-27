@@ -24,6 +24,10 @@ jobs:
       - uses: azure/setup-helm@v4.3.0
         with:
           version: v3.17.3
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: scripts/render-applications/go.mod
+          cache-dependency-path: scripts/render-applications/go.sum
       - name: Install validators
         shell: bash
         run: |
@@ -50,4 +54,4 @@ jobs:
         run: >-
           docker run --rm -v "$PWD:/content"
           -w /content spotify/techdocs:v1.2.6
-          mkdocs build --strict --site-dir /tmp/site
+          build --strict --site-dir /tmp/site
