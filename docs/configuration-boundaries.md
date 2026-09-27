@@ -4,6 +4,12 @@ The catalog supplies reusable definitions. A cluster explicitly selects componen
 projects, and optional policy profiles, then supplies only its differences. A folder
 name does not become a template variable or grant permission.
 
+The Azure shared cluster variants (`uks` and `eus2`) select only `chaos-generator`,
+using the existing `default` project. The `eus2` child reads the catalog base;
+the `uks` child reads a cluster overlay that overrides replicas to two. Terraform
+owns each cluster's `all-apps` root. The platform selections below apply to other
+cluster examples. See [bootstrap](bootstrap.md#azure-shared-chaos-generator-only).
+
 ## Ownership and precedence
 
 - `catalog/platform/components/` holds component inputs: existing names, chart

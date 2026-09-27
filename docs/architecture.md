@@ -1,5 +1,13 @@
 # Architecture
 
+The Azure shared cluster variants (`uks` and `eus2`) select only `chaos-generator`,
+using automatic sync and pruning under Terraform-owned `all-apps`. The `eus2` child
+reads the catalog base at one replica. The `uks` child reads a cluster overlay that
+imports that base and sets two replicas. No platform components are selected.
+The `eus2` legacy root and platform files are inactive. See the
+[bootstrap contract and pruning review](bootstrap.md#azure-shared-chaos-generator-only).
+The platform architecture below describes the other cluster examples.
+
 ## Repository and rendering boundaries
 
 Terraform provisions clusters. Each cluster's own Argo CD instance reconciles
@@ -46,20 +54,19 @@ See [configuration boundaries](configuration-boundaries.md) for precedence and
 
 | Cluster | Generated platform Applications | Workloads | Argo CD owner |
 | --- | --- | --- | --- |
-| Azure `eus2` `aks-shared` | Seven | Atlas ML inference | Azure extension |
+| Azure `eus2` `aks-shared` | None | Chaos generator | Azure extension |
+| Azure `uks` `aks-shared` | None | Chaos generator | Azure extension |
 | Azure `eus2` `aks-atlas-market` | Seven | Atlas Market API and worker | Azure extension |
 | Local `kind-platform` | Eight, including Argo CD | None | Helm, then GitOps |
 | AWS `eks-shared` | None; reserved | None | Not selected |
 
-Azure root names retain `uksouth` for identity compatibility; actual repository
-paths use `eus2`. This does not move cloud resources. Azure roots do not deploy
+Legacy Azure root names retain `uksouth` for identity compatibility and use `eus2`
+paths. Terraform-owned `all-apps` can select the `uks` or `eus2` shared variant. This does not move cloud resources. Azure roots do not deploy
 Argo CD or overwrite extension-owned ConfigMaps. AWS remains unconfigured.
 
 ## Reconciliation and deletion
 
-All existing Application names, namespaces, projects, destinations, revisions,
-sync-wave annotations, and manual sync policies are preserved. No workload pruning
-or automatic sync is enabled. Generated Applications have ApplicationSet controller
+The other cluster examples retain manual sync without workload pruning. Generated Applications have ApplicationSet controller
 owner references after adoption, but no resource-deletion finalizer because
 `preserveResourcesOnDeletion` is true. `applicationsSync: create-update` requests
 no automatic Application deletion on selection removal; the controller must honor
@@ -83,6 +90,8 @@ contact Argo CD or prove live adoption, owner references, controller policy flag
 or reconciliation against the remote Git revision. Argo CD and Gateway API schemas
 remain excluded from kubeconform. TechDocs builds separately in strict mode.
 
-Images and DNS names remain placeholders. Workloads default to zero replicas.
+Other example images and DNS names remain placeholders, with zero workload replicas.
+Chaos generator uses its upstream image, with one replica in `eus2` and two in
+`uks`; runtime is unverified.
 TLS, cloud identity, persistence, network isolation, and recovery require cluster
 implementation and runtime validation before production use.

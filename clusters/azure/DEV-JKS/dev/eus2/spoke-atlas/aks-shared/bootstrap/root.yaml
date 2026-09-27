@@ -1,3 +1,5 @@
+# Inactive legacy example. Do not apply on aks-shared.
+# Terraform owns all-apps; see docs/bootstrap.md for its source contract.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

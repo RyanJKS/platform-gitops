@@ -6,7 +6,7 @@ Cluster provisioning, application source code, and image builds belong in other 
 ## Layout
 
 - `bootstrap/`: shared bootstrap instructions and examples.
-- `clusters/.../bootstrap/root.yaml`: one root Application per configured cluster.
+- `clusters/.../bootstrap/root.yaml`: example roots; Terraform owns the Azure shared root.
 - `catalog/platform/`: component inputs, an ApplicationSet template, matching permission bases, optional policy profiles, and shared Helm values.
 - `catalog/applications/`: reusable workload bases.
 - `clusters/`: explicit cloud, subscription/account alias, environment, region, spoke, and cluster configuration; only differences live here.
@@ -17,14 +17,17 @@ Cluster paths identify their deployment target directly:
 
 ```text
 clusters/azure/DEV-JKS/dev/eus2/spoke-atlas/aks-shared/
+clusters/azure/DEV-JKS/dev/uks/spoke-atlas/aks-shared/
 clusters/azure/DEV-JKS/dev/eus2/spoke-atlas/aks-atlas-market/
 clusters/aws/personal-account/dev/eu-west-2/spoke-atlas/eks-shared/
 clusters/local/kind/kind-platform/
 ```
 
-Azure dev has shared (`atlas-ml`) and dedicated (`atlas-market`) cluster configurations.
+Azure dev has shared (`chaos-generator`) and dedicated (`atlas-market`) cluster configurations.
 Local kind has platform capabilities only. Azure prod and AWS dev are reserved scaffolds with no bootstrap roots.
-All syncs are manual. Workloads start at zero replicas with placeholder images and example DNS names.
+The Azure shared cluster variants (`uks` and `eus2`) select only `chaos-generator`, with automatic sync under
+Terraform-owned `all-apps` on `feature/repo-setup`. See [bootstrap](docs/bootstrap.md#azure-shared-chaos-generator-only).
+Other cluster examples use manual sync. Other example workloads start at zero replicas with placeholder images and example DNS names.
 These are starting configurations, not production-ready deployments.
 
 ## Start here
