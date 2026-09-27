@@ -4,7 +4,7 @@ resources:
   - ../../../../../../../../../catalog/applications/chaos-generator
 replicas:
   - name: chaos-generator
-    count: 3
+    count: 5
 images:
   - name: ryanjks/chaos-generator
     newTag: 757afd
