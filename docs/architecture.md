@@ -1,12 +1,13 @@
 # Architecture
 
-The Azure shared cluster variants (`uks` and `eus2`) select only `chaos-generator`,
-using automatic sync and pruning under Terraform-owned `all-apps`. The `eus2` child
-reads the catalog base at one replica. The `uks` child reads a cluster overlay that
-imports that base and sets two replicas. No platform components are selected.
-The `eus2` legacy root and platform files are inactive. See the
-[bootstrap contract and pruning review](bootstrap.md#azure-shared-chaos-generator-only).
-The platform architecture below describes the other cluster examples.
+The Terraform owns the Azure shared cluster roots and the Microsoft Argo CD extension.
+East US 2 selects only `chaos-generator`. UK South preserves its two-replica chaos
+overlay and adds one cert-manager Application, a dedicated AppProject, and the
+`letsencrypt-prod` ClusterIssuer. The chart and issuer share one sync operation;
+resource waves and the chart's admission-check Job gate issuer creation. See
+[UK South HTTPS](https.md) for versions, ownership, and external configuration.
+
+The ApplicationSet arrangement below applies to the other cluster examples.
 
 ## Repository and rendering boundaries
 
@@ -14,7 +15,8 @@ Terraform provisions clusters. Each cluster's own Argo CD instance reconciles
 platform components and business applications from this public repository.
 Application code and image builds live elsewhere.
 
-Each cluster owns a small `bootstrap/root.yaml`. Its full repository-relative
+The market example owns a small `bootstrap/root.yaml`. Local kind uses
+`bootstrap/local-kind.yaml` at repository level, outside its managed entry point. Its full repository-relative
 source path selects the cluster's `argocd/kustomization.yaml`; that entry point
 never includes the root. Azure and AWS retain their cloud/account/environment/
 region/spoke hierarchy. Local kind retains its shorter hierarchy.
@@ -55,9 +57,9 @@ See [configuration boundaries](configuration-boundaries.md) for precedence and
 | Cluster | Generated platform Applications | Workloads | Argo CD owner |
 | --- | --- | --- | --- |
 | Azure `eus2` `aks-shared` | None | Chaos generator | Azure extension |
-| Azure `uks` `aks-shared` | None | Chaos generator | Azure extension |
+| Azure `uks` `aks-shared` | One direct cert-manager Application | Chaos generator | Azure extension |
 | Azure `eus2` `aks-atlas-market` | Seven | Atlas Market API and worker | Azure extension |
-| Local `kind-platform` | Eight, including Argo CD | None | Helm, then GitOps |
+| Local `kind-platform` | One direct Argo CD Application | None | Helm, then GitOps |
 | AWS `eks-shared` | None; reserved | None | Not selected |
 
 Legacy Azure root names retain `uksouth` for identity compatibility and use `eus2`
@@ -93,5 +95,5 @@ remain excluded from kubeconform. TechDocs builds separately in strict mode.
 Other example images and DNS names remain placeholders, with zero workload replicas.
 Chaos generator uses its upstream image, with one replica in `eus2` and two in
 `uks`; runtime is unverified.
-TLS, cloud identity, persistence, network isolation, and recovery require cluster
+Live TLS issuance, cloud identity, persistence, network isolation, and recovery require cluster
 implementation and runtime validation before production use.

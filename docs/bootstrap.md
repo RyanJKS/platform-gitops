@@ -1,6 +1,6 @@
 # Bootstrap
 
-## Azure shared: chaos-generator only
+## Azure shared bootstrap
 
 For the `uks` and `eus2` variants of `spoke-atlas/aks-shared`, Terraform installs
 Argo CD through the Azure extension and creates the root Application `all-apps`
@@ -13,7 +13,7 @@ Configure Terraform's root with this exact source and enable automated sync:
 spec:
   source:
     repoURL: https://github.com/RyanJKS/platform-gitops.git
-    targetRevision: feature/repo-setup
+    targetRevision: main
     path: clusters/azure/DEV-JKS/dev/uks/spoke-atlas/aks-shared/argocd
   destination:
     server: https://kubernetes.default.svc
@@ -34,7 +34,7 @@ outside this repository and is not changed here. The repository is public;
 no repository credential Secret is required. The existing `default` AppProject
 must allow this repository, the in-cluster destination, and workload resources.
 
-Commit and push these changes to `feature/repo-setup` before Argo CD can read them.
+Commit and push these changes to `main` before Argo CD can read them.
 Terraform creates the root; Argo CD asynchronously creates the `chaos-generator`
 child Application and then its workload. Argo CD shows separate `all-apps` and
 `chaos-generator` entries. The child uses automatic sync, pruning, self-healing,
@@ -46,8 +46,9 @@ and Service preserve the functional settings from the upstream
 [intro example](https://github.com/RyanJKS/chaos-generator/tree/main/infrastructure/k8s/examples/intro),
 inspected on 2026-09-27: one replica, image `ryanjks/chaos-generator:v1`, and TCP port
 8501. Namespace is unset in both manifests so Argo CD supplies it. The base excludes
-NGINX Ingress and the commented probes targeting port 3000. No platform component,
-ApplicationSet, custom AppProject, or ingress controller is selected.
+NGINX Ingress and the commented probes targeting port 3000. UK South also selects
+cert-manager and its dedicated AppProject; see [HTTPS bootstrap](https.md).
+East US 2 still selects only chaos-generator. No new ingress controller is installed.
 Image pullability and application runtime have not been verified.
 
 ### Override replicas and image tag for uks
@@ -68,15 +69,16 @@ images:
 Edit `count` in that overlay to change the desired replica count. Edit `newTag`
 to select an image version; it currently retains the upstream `v1` tag. The shared base
 and the `eus2` variant remain at one replica. Commit and push the overlay change
-to `feature/repo-setup`; the child's automatic sync applies it. Manual scaling can
+to `main`; the child's automatic sync applies it. Manual scaling can
 be reverted by self-healing. Terraform's root still watches the `uks/…/argocd`
 entry point; only the child source points at the workload overlay.
 
 ### Review pruning before applying
 
-The new `uks` entry point has no previous Git selections. If an existing root is
-repointed to it, review the resources that root currently tracks before pruning.
-The previous `eus2` entry point rendered AppProjects `atlas-ml` and `platform`, Application
+The `uks` entry point adds cert-manager to its existing chaos-generator selection.
+The cert-manager child does not enable pruning or cascading deletion; see
+[HTTPS pruning](https.md#pruning-and-cleanup). If an existing root is repointed
+to this path, review the resources that root currently tracks before pruning. The previous `eus2` entry point rendered AppProjects `atlas-ml` and `platform`, Application
 `atlas-ml-inference`, and ApplicationSet `platform`. Root pruning can delete these
 objects if the root previously tracked them. Deleting the ApplicationSet can also
 cause Kubernetes garbage collection to delete its generated Applications:
@@ -122,7 +124,8 @@ errors. Do not trigger chaos operations as part of bootstrap verification.
 
 ## Other cluster examples
 
-The remaining instructions apply to the market and local kind examples, not the
+For local kind, follow [local kind bootstrap](local-kind.md).
+The remaining instructions apply to the market example, not the
 Terraform-owned `all-apps` setup above.
 
 ## Prerequisites
@@ -166,9 +169,6 @@ Set `CONTEXT` to the intended kubeconfig context and choose exactly one pair:
 CLUSTER=clusters/azure/DEV-JKS/dev/eus2/spoke-atlas/aks-atlas-market
 ROOT=azure-dev-uksouth-atlas-market
 
-# Local kind (Helm-based)
-CLUSTER=clusters/local/kind/kind-platform
-ROOT=local-kind
 ```
 
 The Azure directories and cluster overlays identify `eus2`. Earlier root and child
@@ -176,21 +176,6 @@ source paths incorrectly used nonexistent `uksouth` directories. Paths now use
 `eus2`; existing Application names retain `uksouth` to preserve their identity.
 This does not change the location of any cloud resource. AWS has reserved files
 only and no root to apply.
-
-For local kind, create the cluster separately with `kind create cluster --name
-kind-platform`; its context is `kind-kind-platform`. For Helm-based installations
-only, install Argo CD with the same chart and values selected by `platform-argocd`:
-
-```sh
-helm repo add argo https://argoproj.github.io/argo-helm
-helm repo update argo
-helm upgrade --install argocd argo/argo-cd --version 7.8.13 \
-  --kube-context "$CONTEXT" --namespace argocd --create-namespace \
-  -f catalog/platform/argocd/values.yaml --wait
-```
-
-Append any cluster Argo CD values override to both the Helm command and the child
-Application. Do not run this Helm command on extension-managed clusters.
 
 There is no bootstrap script. From the repository root, apply only the selected
 cluster's initial root after verifying the context:
@@ -225,16 +210,13 @@ cascading deletion. Do not prune or delete extension-owned Argo CD resources.
 1. Sync the root with `argocd app sync "$ROOT"`. Verify AppProjects and child Applications appear.
    A root sync does not sync its children; sync waves are not a dependency scheduler here.
 2. Sync `platform-namespaces`, then wait for its sync to complete.
-3. For Helm-based installations only, sync `platform-argocd`. Skip this step on extension-managed Azure clusters. This hands resource reconciliation to Argo CD using the same chart,
-   release name, namespace, and values as bootstrap. Do not subsequently run Helm upgrade or
-   uninstall against this release: stale Helm release metadata is not the source of truth.
-4. Sync `platform-cert-manager`, `platform-external-secrets`, `platform-monitoring`, and
+3. Sync `platform-cert-manager`, `platform-external-secrets`, `platform-monitoring`, and
    `platform-gateway-controller`. Wait for controllers, webhooks, and CRDs to become ready.
-5. Sync `platform-policy`, then `platform-gateway-resources`. Confirm the GatewayClass is accepted
-   and the Gateway is programmed. A kind Gateway can remain pending until load-balancer support exists.
-6. Follow [onboarding](onboarding-an-application.md) to configure workload images and replicas before
+4. Sync `platform-policy`, then `platform-gateway-resources`. Confirm the GatewayClass is accepted
+   and the Gateway is programmed.
+5. Follow [onboarding](onboarding-an-application.md) to configure workload images and replicas before
    syncing `atlas-ml-inference` or the dedicated cluster's `atlas-market-api` and `atlas-market-worker`.
-   Local kind has no workload Applications by default.
+
 
 For example, sync and wait for a controller with:
 

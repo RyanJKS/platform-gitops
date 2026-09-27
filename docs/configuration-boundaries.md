@@ -4,11 +4,14 @@ The catalog supplies reusable definitions. A cluster explicitly selects componen
 projects, and optional policy profiles, then supplies only its differences. A folder
 name does not become a template variable or grant permission.
 
-The Azure shared cluster variants (`uks` and `eus2`) select only `chaos-generator`,
-using the existing `default` project. The `eus2` child reads the catalog base;
-the `uks` child reads a cluster overlay that overrides replicas to two. Terraform
-owns each cluster's `all-apps` root. The platform selections below apply to other
-cluster examples. See [bootstrap](bootstrap.md#azure-shared-chaos-generator-only).
+The Terraform owns the Azure shared cluster roots and the Microsoft Argo CD extension.
+East US 2 selects only `chaos-generator`. UK South preserves its two-replica chaos
+overlay and adds one cert-manager Application, a dedicated AppProject, and the
+`letsencrypt-prod` ClusterIssuer. The chart and issuer share one sync operation;
+resource waves and the chart's admission-check Job gate issuer creation. See
+[UK South HTTPS](https.md) for versions, ownership, and external configuration.
+
+The ApplicationSet arrangement below applies to the other cluster examples.
 
 ## Ownership and precedence
 
@@ -56,10 +59,21 @@ It never scans cluster directories. The cluster entry point patches the generato
 `values.clusterPath`; the Go template reads it as `.values.clusterPath`.
 
 Azure clusters omit `argocd`. Terraform's Azure extension owns their Argo CD
-installation, including ConfigMaps. Kind selects `argocd` and retains the existing
-Helm-to-GitOps handover. No installation method changes in this refactor.
+installation, including ConfigMaps. Kind imports
+`catalog/platform/argocd` directly and retains its existing Helm-to-GitOps handover.
+The local layout changes do not change its initial installation method.
 
 Review shared catalog changes as changes to every consumer. Shared policies are
 opt-in and versioned with Git; matching values alone do not justify merging
 separate security boundaries. Keep credentials, cloud identities, TLS choices,
 network isolation, persistent storage, and recovery decisions under their owners.
+
+## Local kind
+
+The local cluster contains only `argocd/` and `applications/`. Its entry point
+imports one direct Argo CD Application, using the existing chart, release, values,
+and manual sync policy. The root lives at `bootstrap/local-kind.yaml` and does not
+manage itself. No platform ApplicationSet, workload namespace, AppProject, policy,
+or gateway is selected. Workload overlays belong in `applications/`; add their
+child Application manifests to the `argocd/` Kustomization when needed. See
+[local kind bootstrap](local-kind.md), including migration from the old selections.

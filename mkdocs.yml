@@ -5,9 +5,10 @@ nav:
   - Architecture: architecture.md
   - Configuration boundaries: configuration-boundaries.md
   - Bootstrap: bootstrap.md
+  - Local kind: local-kind.md
   - Adding a cluster: adding-a-cluster.md
   - Onboarding an application: onboarding-an-application.md
-  - GitHub Actions runners: github-actions-runners.md
+  - UK South HTTPS: https.md
   - Promotion: promotion.md
   - Recovery: recovery.md
 plugins:

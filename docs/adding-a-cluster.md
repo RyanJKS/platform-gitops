@@ -6,55 +6,14 @@ are configuration changes, not deployment commands.
 
 ## Add one component to an existing cluster
 
-For example, add the optional GitHub Actions controller to local kind. Its chart
-version matches the existing optional ARC example; this does not create runners
-or require storing credentials in Git.
+Select an existing entry from `catalog/platform/components/` in the cluster's
+ApplicationSet list. Include its required namespaces and AppProject permissions.
+Only add a new catalog entry when a cluster needs it; do not add future placeholders.
+Run `scripts/validate.sh` and update the cluster selection assertions when needed.
 
-1. Add `catalog/platform/components/github-actions-controller.yaml`:
-
-   ```yaml
-   name: github-actions-controller
-   type: helm
-   wave: '-2'
-   namespace: arc-systems
-   repoURL: ghcr.io/actions/actions-runner-controller-charts
-   chart: gha-runner-scale-set-controller
-   version: 0.13.0
-   releaseName: arc-controller
-   defaultValues: $values/catalog/platform/github-actions/controller/values.yaml
-   ```
-
-2. In `clusters/local/kind/kind-platform/argocd/kustomization.yaml`, append
-   `- component: github-actions-controller` to the list patch's `value` array.
-   No Application manifest or template copy is needed.
-3. Add `../../../../../../catalog/platform/github-actions/controller/namespaces`
-   to the resources in that cluster's `platform/namespaces/kustomization.yaml`.
-4. In that cluster's `argocd/projects/kustomization.yaml`, append these operations
-   to the existing platform project's patch:
-
-   ```yaml
-   - op: add
-     path: /spec/sourceRepos/-
-     value: ghcr.io/actions/actions-runner-controller-charts
-   - op: add
-     path: /spec/destinations/-
-     value:
-       server: https://kubernetes.default.svc
-       namespace: arc-systems
-   ```
-
-5. Run `scripts/validate.sh`. Update the explicit component-count assertion in
-   `scripts/render-applications/main_test.go` to reflect the reviewed addition.
-   Merge, sync the root, wait for the generated Application, sync namespaces, and
-   then sync the controller when ready. Follow [runner onboarding](github-actions-runners.md)
-   separately before adding a runner scale set. Do not also select the ordinary
-   example controller Application: one owner per Application.
-
-For an already-cataloged component, start at step 2. To override values, add a
-cluster file and an `overrideValues` list to its element; paths are relative to the
-one configured `clusterPath`. To stage a chart upgrade, set `versionOverride` on
-that element. Keep unique workload Applications ordinary when a template adds no
-useful reuse.
+UK South uses the dedicated `catalog/platform/cert-manager` Application instead of
+the broader ApplicationSet. Do not select both arrangements on the same cluster.
+Its chart and issuer must stay in one sync operation; see [HTTPS](https.md).
 
 ## Add a cluster without copying shared manifests
 

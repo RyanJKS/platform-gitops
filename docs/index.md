@@ -6,10 +6,11 @@ Infrastructure provisioning and container image builds are outside this reposito
 
 - [Configuration boundaries](configuration-boundaries.md): shared defaults versus cluster implementation.
 - [Architecture](architecture.md): repository boundaries, ownership, and current limitations.
+- [Local kind](local-kind.md): minimal Argo CD setup and migration.
 - [Bootstrap](bootstrap.md): attach an existing cluster to Git.
 - [Adding a cluster](adding-a-cluster.md): create an isolated cluster configuration.
 - [Onboarding an application](onboarding-an-application.md): add a workload safely.
-- [GitHub Actions runners](github-actions-runners.md): opt-in ARC controller and runner scale sets.
+- [UK South HTTPS](https.md): cert-manager bootstrap and extension-owned Ingress settings.
 - [Promotion](promotion.md): promote reviewed configuration between environments.
 - [Recovery](recovery.md): recover controllers and roll back configuration.
 
