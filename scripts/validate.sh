@@ -6,7 +6,7 @@ for tool in yq kubectl helm kubeconform go; do
 done
 output=$(mktemp -d)
 trap 'rm -rf "$output"' EXIT
-(cd scripts/render-applications && go test ./... && go build -o "$output/render-applications" .)
+(cd scripts/render-applications && go test ./...)
 while IFS= read -r file; do
   yq eval '.' "$file" >/dev/null
 done < <(find bootstrap catalog clusters .github -type f -name '*.yaml' | sort)
@@ -28,14 +28,8 @@ while IFS= read -r file; do
   test -f "$source_path/kustomization.yaml"
   root_name=${source_path//\//-}
   kubectl kustomize "$source_path" > "$output/root.yaml"
-  cluster=$(dirname "$source_path")
   cp "$output/root.yaml" "$output/applications.yaml"
-  while IFS= read -r set_name; do
-    SET_NAME="$set_name" yq 'select(.kind == "ApplicationSet" and .metadata.name == strenv(SET_NAME))' \
-      "$output/root.yaml" > "$output/applicationset.yaml"
-    "$output/render-applications" "$PWD" "$cluster" "$output/applicationset.yaml" > "$output/generated.yaml"
-    cat "$output/generated.yaml" >> "$output/applications.yaml"
-  done < <(yq -N -r 'select(.kind == "ApplicationSet") | .metadata.name' "$output/root.yaml")
+  test -z "$(yq -N -r 'select(.kind == "ApplicationSet") | .metadata.name' "$output/root.yaml")"
   while IFS= read -r app_name; do
     APP_NAME="$app_name" yq 'select(.kind == "Application" and .metadata.name == strenv(APP_NAME))' \
       "$output/applications.yaml" > "$output/app-$root_name-$app_name.yaml"
