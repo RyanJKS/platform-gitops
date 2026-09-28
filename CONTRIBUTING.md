@@ -40,7 +40,7 @@ cluster entry point and selected child source, including roots created by Terraf
 Inspect a cluster without connecting to Kubernetes:
 
 ```sh
-kubectl kustomize clusters/azure/DEV-JKS/dev/uks/spoke-atlas/aks-shared/argocd
+kubectl kustomize clusters/azure/DEV-JKS/dev/uks/atlas/aks-shared/argocd
 ```
 
 Offline validation does not prove live ownership, controller readiness, or DNS.

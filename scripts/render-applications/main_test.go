@@ -22,7 +22,7 @@ func readYAML(path string, target interface{}) error {
 func TestSharedClusterRoots(t *testing.T) {
 	for _, region := range []string{"uks", "eus2"} {
 		t.Run(region, func(t *testing.T) {
-			path := "clusters/azure/DEV-JKS/dev/" + region + "/spoke-atlas/aks-shared/argocd"
+			path := "clusters/azure/DEV-JKS/dev/" + region + "/atlas/aks-shared/argocd"
 			data, err := exec.Command("kubectl", "kustomize", "../../"+path).Output()
 			if err != nil {
 				t.Fatal(err)
@@ -123,7 +123,7 @@ func TestLocalKindRoot(t *testing.T) {
 }
 
 func TestMarketRoot(t *testing.T) {
-	data, err := exec.Command("kubectl", "kustomize", "../../clusters/azure/DEV-JKS/dev/eus2/spoke-atlas/aks-atlas-market/argocd").CombinedOutput()
+	data, err := exec.Command("kubectl", "kustomize", "../../clusters/azure/DEV-JKS/dev/eus2/atlas/aks-atlas-market/argocd").CombinedOutput()
 	if err != nil {
 		t.Fatalf("%v: %s", err, data)
 	}

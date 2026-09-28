@@ -1,8 +1,24 @@
 # Bootstrap
 
+## Domain path migration
+
+Cloud cluster directories now use the domain name directly: `atlas/` replaces
+`spoke-atlas/`. Application names, namespaces, and cluster identities are unchanged.
+
+Publish the renamed directories and updated child Application paths together. Update
+each external root's `spec.source.path` to the matching `atlas/<cluster>/argocd` path
+at a Git revision containing this change, then reconcile that existing root. Azure
+shared roots are owned by Terraform; update their Terraform configuration instead of
+creating replacement roots. Update any external automation that constructs cluster
+paths. Roots still using the old path cannot render after this change.
+
+This repository contains no Terragrunt configuration. Renaming `spoke.hcl` to
+`domain.hcl`, updating its includes, and checking any path-derived state keys belong
+to the infrastructure repository and must be coordinated separately.
+
 ## Azure shared bootstrap
 
-For the `uks` and `eus2` variants of `spoke-atlas/aks-shared`, Terraform installs
+For the `uks` and `eus2` variants of `atlas/aks-shared`, Terraform installs
 Argo CD through the Azure extension and creates the root Application `all-apps`
 in namespace `argocd`. Do not apply the inactive legacy `bootstrap/root.yaml`,
 install another Argo CD instance, or create another root owner.
@@ -14,7 +30,7 @@ spec:
   source:
     repoURL: https://github.com/RyanJKS/platform-gitops.git
     targetRevision: main
-    path: clusters/azure/DEV-JKS/dev/uks/spoke-atlas/aks-shared/argocd
+    path: clusters/azure/DEV-JKS/dev/uks/atlas/aks-shared/argocd
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
@@ -25,7 +41,7 @@ spec:
 ```
 
 The source above selects the new `uks` variant. The existing `eus2` variant remains
-available at `clusters/azure/DEV-JKS/dev/eus2/spoke-atlas/aks-shared/argocd`.
+available at `clusters/azure/DEV-JKS/dev/eus2/atlas/aks-shared/argocd`.
 Choose exactly one source path for each cluster's Terraform-owned `all-apps` root;
 do not create both variants' identically named child Applications in one cluster.
 Both variants use the same catalog base; `uks` adds a replica override. No bootstrap root manifest is
@@ -54,7 +70,7 @@ Image pullability and application runtime have not been verified.
 ### Override replicas and image tag for uks
 
 The `uks` child reads
-`clusters/azure/DEV-JKS/dev/uks/spoke-atlas/aks-shared/applications/chaos-generator`.
+`clusters/azure/DEV-JKS/dev/uks/atlas/aks-shared/applications/chaos-generator`.
 Its `kustomization.yaml` imports the catalog base and overrides the Deployment:
 
 ```yaml
@@ -103,9 +119,9 @@ No live resources were inspected or deleted for this change.
 Render locally from the repository root:
 
 ```sh
-kubectl kustomize clusters/azure/DEV-JKS/dev/uks/spoke-atlas/aks-shared/argocd
-kubectl kustomize clusters/azure/DEV-JKS/dev/eus2/spoke-atlas/aks-shared/argocd
-kubectl kustomize clusters/azure/DEV-JKS/dev/uks/spoke-atlas/aks-shared/applications/chaos-generator
+kubectl kustomize clusters/azure/DEV-JKS/dev/uks/atlas/aks-shared/argocd
+kubectl kustomize clusters/azure/DEV-JKS/dev/eus2/atlas/aks-shared/argocd
+kubectl kustomize clusters/azure/DEV-JKS/dev/uks/atlas/aks-shared/applications/chaos-generator
 kubectl kustomize catalog/applications/chaos-generator
 ```
 
@@ -130,7 +146,7 @@ and API/worker Applications. Terraform must already provide Argo CD. From the
 repository root, after changes reach `main`:
 
 ```sh
-CLUSTER=clusters/azure/DEV-JKS/dev/eus2/spoke-atlas/aks-atlas-market
+CLUSTER=clusters/azure/DEV-JKS/dev/eus2/atlas/aks-atlas-market
 kubectl --context "$CONTEXT" apply -f "$CLUSTER/bootstrap/root.yaml"
 ```
 

@@ -1,19 +1,17 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: atlas-market-api
+  name: azure-dev-uksouth-atlas-market
   namespace: argocd
-  annotations:
-    argocd.argoproj.io/sync-wave: "1"
 spec:
-  project: atlas-market
+  project: default
   source:
     repoURL: https://github.com/RyanJKS/platform-gitops.git
     targetRevision: main
-    path: clusters/azure/DEV-JKS/dev/eus2/spoke-atlas/aks-atlas-market/applications/atlas-market/api
+    path: clusters/azure/DEV-JKS/dev/eus2/atlas/aks-atlas-market/argocd
   destination:
     server: https://kubernetes.default.svc
-    namespace: atlas-market
+    namespace: argocd
   syncPolicy:
     syncOptions:
       - ServerSideApply=true

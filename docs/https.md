@@ -3,7 +3,7 @@
 ## Scope and bootstrap ordering
 
 The root entry point is
-`clusters/azure/DEV-JKS/dev/uks/spoke-atlas/aks-shared/argocd/kustomization.yaml`.
+`clusters/azure/DEV-JKS/dev/uks/atlas/aks-shared/argocd/kustomization.yaml`.
 It imports `catalog/platform/cert-manager` and preserves the chaos-generator
 Application and its existing overlay. No additional ingress controller, Argo CD
 installation, ExternalDNS, Key Vault integration, or CSI driver is selected.
@@ -50,7 +50,7 @@ is not the supported-version matrix. The existing market chart pin is
 unchanged; the new Application is selected only by UK South.
 
 The adjacent infrastructure checkout's
-`infrastructure/azure/live/DEV-JKS/dev/uks/spoke-atlas/platform/aks_cluster/terragrunt.hcl`
+`aks_cluster/terragrunt.hcl` under the UK South Atlas platform configuration
 leaves `kubernetes_version` commented out. Its example `1.37` is not an active
 setting. Azure therefore selects the regional default; no actual cluster version
 was available from repository configuration. Before rollout, inspect
@@ -62,9 +62,9 @@ Do not downgrade an existing cluster to match the offline validation baseline.
 ## Extension settings outside this repository
 
 Read-only inspection found the extension configuration in the adjacent
-`platform-infrastructure` checkout at:
-
-`infrastructure/azure/live/DEV-JKS/dev/uks/spoke-atlas/platform/aks_argocd_extension/terragrunt.hcl`
+`platform-infrastructure` checkout, in `aks_argocd_extension/terragrunt.hcl` under
+the UK South Atlas platform configuration. Its directory layout is maintained
+separately from this repository.
 
 It selects `Microsoft.ArgoCD`, name `argocd-ext`, release train `preview`, with no
 explicit extension version. It already configures the hostname, ingress class,
