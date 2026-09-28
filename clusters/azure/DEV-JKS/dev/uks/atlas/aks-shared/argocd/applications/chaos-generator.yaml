@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://github.com/RyanJKS/platform-gitops.git
     targetRevision: main
-    path: clusters/azure/DEV-JKS/dev/uks/spoke-atlas/aks-shared/applications/chaos-generator
+    path: clusters/azure/DEV-JKS/dev/uks/atlas/aks-shared/applications/chaos-generator
   destination:
     server: https://kubernetes.default.svc
     namespace: chaos-generator

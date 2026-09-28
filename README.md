@@ -9,21 +9,25 @@ Cluster provisioning, application source code, and image builds belong in other 
 - `clusters/.../bootstrap/root.yaml`: example roots; Terraform owns the Azure shared root.
 - `catalog/platform/`: component inputs, an ApplicationSet template, matching permission bases, optional policy profiles, and shared Helm values.
 - `catalog/applications/`: reusable workload bases.
-- `clusters/`: explicit cloud, subscription/account alias, environment, region, spoke, and cluster configuration; only differences live here.
+- `clusters/`: explicit cloud, subscription/account alias, environment, region, domain, and cluster configuration; only differences live here.
 - `docs/`: architecture and operational guides.
 - `scripts/validate.sh`: the same manifest checks used by CI.
+
+Cloud paths use `clusters/<cloud>/<account>/<environment>/<region>/<domain>/<cluster>/`.
+The domain (for example, `atlas`) represents the business area and its network spoke.
+Use the domain name directly, without a `spoke-` prefix. Local kind keeps its shorter layout.
 
 Cluster paths identify their deployment target directly:
 
 ```text
-clusters/azure/DEV-JKS/dev/eus2/spoke-atlas/aks-shared/
-clusters/azure/DEV-JKS/dev/uks/spoke-atlas/aks-shared/
-clusters/azure/DEV-JKS/dev/eus2/spoke-atlas/aks-atlas-market/
-clusters/aws/personal-account/dev/eu-west-2/spoke-atlas/eks-shared/
+clusters/azure/DEV-JKS/dev/eus2/atlas/aks-shared/
+clusters/azure/DEV-JKS/dev/uks/atlas/aks-shared/
+clusters/azure/DEV-JKS/dev/eus2/atlas/aks-atlas-market/
+clusters/aws/personal-account/dev/eu-west-2/atlas/eks-shared/
 clusters/local/kind/kind-platform/
 ```
 
-UK South (`clusters/azure/DEV-JKS/dev/uks/spoke-atlas/aks-shared/`) deploys
+UK South (`clusters/azure/DEV-JKS/dev/uks/atlas/aks-shared/`) deploys
 cert-manager and `letsencrypt-prod`, preserving `chaos-generator`. East US 2 and
 market keep their existing selections. Local kind now has only `argocd/` and
 `applications/`, selects Argo CD only, and uses `bootstrap/local-kind.yaml` for its root.

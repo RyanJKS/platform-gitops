@@ -14,6 +14,10 @@
 
 ### Changed
 
+- Renamed cloud cluster directories from `spoke-atlas/` to `atlas/`, using the domain
+  name directly. Updated Application paths, validation fixtures, and documentation;
+  external root owners must update their source paths to match.
+
 - Grouped environments beneath subscription/account aliases, using `DEV-JKS` for the current Azure subscription.
 
 - Renamed cluster configuration from `live/` to `clusters/` and removed redundant inner cluster directories.

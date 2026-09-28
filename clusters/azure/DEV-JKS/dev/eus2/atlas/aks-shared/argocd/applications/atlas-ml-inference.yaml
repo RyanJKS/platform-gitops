@@ -1,19 +1,19 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: atlas-market-worker
+  name: atlas-ml-inference
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "1"
 spec:
-  project: atlas-market
+  project: atlas-ml
   source:
     repoURL: https://github.com/RyanJKS/platform-gitops.git
     targetRevision: main
-    path: clusters/azure/DEV-JKS/dev/eus2/spoke-atlas/aks-atlas-market/applications/atlas-market/worker
+    path: clusters/azure/DEV-JKS/dev/eus2/atlas/aks-shared/applications/atlas-ml/inference
   destination:
     server: https://kubernetes.default.svc
-    namespace: atlas-market
+    namespace: atlas-ml
   syncPolicy:
     syncOptions:
       - ServerSideApply=true

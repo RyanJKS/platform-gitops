@@ -4,7 +4,10 @@ Provision the cluster and install Argo CD through its intended owner first. Azur
 uses the Microsoft extension; local kind follows [its bootstrap guide](local-kind.md).
 Never select the local Argo CD Application on an extension-managed cluster.
 
-1. Create the cluster's `argocd/` entry point and `applications/` overlays.
+1. Create the cluster's `argocd/` entry point and `applications/` overlays under
+   `clusters/<cloud>/<account>/<environment>/<region>/<domain>/<cluster>/`.
+   Use the domain name directly (for example, `atlas`); the domain is also the network
+   spoke. Local kind uses `clusters/local/kind/<cluster>/`.
 2. Select only required direct Applications in `argocd/kustomization.yaml`.
    Reuse `catalog/` resources rather than copying shared manifests.
 3. Include each workload's AppProject and namespace. Verify source repositories,
