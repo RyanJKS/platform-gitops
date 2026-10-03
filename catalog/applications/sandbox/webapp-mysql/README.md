@@ -1,12 +1,13 @@
 # Webapp and MySQL sandbox
 
 This sandbox uses nested Kustomizations without bases or overlays. The root includes
-both `mysql/` and `webapp/`; each child can also be rendered or applied independently.
-Both children target the `webapp-mysql` namespace.
+`namespace.yaml`, `mysql/`, and `webapp/`; each child can also be rendered or applied
+independently. Both children target the `webapp-mysql` namespace. Applying the root
+creates this namespace; applying a child alone requires the namespace to exist first.
 
 The MySQL manifests live in `mysql/`. The `webapp/` Kustomization is currently empty;
 add the webapp manifests there and list them in its `resources` before deploying it.
-Applying the root currently deploys only MySQL.
+Applying the root currently creates the namespace and deploys MySQL.
 
 See the [sandbox procedure](../../../../docs/onboarding-an-application.md#sandbox-webapp-and-mysql)
 for prerequisites, rendering, and apply commands.
@@ -25,6 +26,22 @@ for prerequisites, rendering, and apply commands.
 ## Setup
 
 User - > Load Balancer (Service) -> Web App (deployment) -> MySQL Ip (Cluster IP Service) -> MySQL (Deployment)
+
+## Kustomize
+
+Kustomize provides the convenience of not having to repeatedbly add "namespace: <>" in all manifest. **Creating Namespace alone does not assign resources to it.**
+
+This setting in child `kustomization.yaml` does:
+
+```
+namespace: webapp-mysql
+```
+
+Kustomize adds `metadata.namespace: webapp-mysql` to rendered Deployment, Service, PVC, and ConfigMap. No need to repeat it in each manifest. Deployment’s Pods inherit its namespace.
+
+Cluster-scoped resources, such as StorageClass, stay outside namespaces.
+
+Use `kubectl apply -k` to apply these transformations. `kubectl apply -f deployment.yaml` bypasses Kustomize.
 
 ## Definitions
 

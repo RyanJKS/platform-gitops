@@ -42,13 +42,16 @@ placeholder images from being started but does not make the scaffold a working a
 ## Sandbox webapp and MySQL
 
 `catalog/applications/sandbox/webapp-mysql/` is a sandbox with no bases or overlays.
-Its root Kustomization includes `mysql/` and `webapp/`. Each child has its own
+Its root Kustomization includes `namespace.yaml`, `mysql/`, and `webapp/`. Each child has its own
 Kustomization and sets `namespace: webapp-mysql`, so it can be applied independently.
 The MySQL child includes its Deployment, Service, initialization ConfigMap,
 PersistentVolumeClaim, and StorageClass. The webapp child is currently empty; add
 its manifests and list them in `webapp/kustomization.yaml` before deploying it.
-Rendering the root currently produces five MySQL resources; rendering `webapp/`
-produces no resources.
+Rendering the root currently produces the Namespace and five MySQL resources;
+rendering `webapp/` produces no resources. The child namespace setting applies to
+the Deployment, Service, PVC, and initialization ConfigMap. The StorageClass is
+cluster-scoped. The SQL database name `webappdb` is separate from the Kubernetes
+namespace and does not need a namespace setting in SQL.
 
 From the repository root, render the populated entry points without contacting a cluster:
 
@@ -57,8 +60,10 @@ kubectl kustomize catalog/applications/sandbox/webapp-mysql
 kubectl kustomize catalog/applications/sandbox/webapp-mysql/mysql
 ```
 
-Before applying, select the intended sandbox cluster and create the `webapp-mysql`
-namespace if it does not already exist. The MySQL PVC requires a cluster with the
+Before applying, select the intended sandbox cluster. Applying the root creates
+the `webapp-mysql` namespace. Before applying a child independently, create the
+namespace with `kubectl apply -f namespace.yaml` from the sandbox directory if it
+does not already exist. The MySQL PVC requires a cluster with the
 Azure Disk provisioner declared by `mysql/storage-class.yaml`. Confirm that the
 cluster supports that provisioner and the configured storage parameters.
 
@@ -66,7 +71,7 @@ From the sandbox directory, choose the scope to apply:
 
 ```sh
 cd catalog/applications/sandbox/webapp-mysql
-kubectl apply -k .         # Apply all populated children.
+kubectl apply -k .         # Create the namespace and apply all populated children.
 kubectl apply -k mysql/    # Apply only MySQL.
 # After adding the webapp manifests:
 kubectl apply -k webapp/   # Apply only the webapp.

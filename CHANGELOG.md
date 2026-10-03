@@ -15,7 +15,8 @@
 ### Changed
 
 - Split the webapp/MySQL sandbox into nested `mysql/` and `webapp/` Kustomizations,
-  keeping a root entry point for combined applies without bases or overlays.
+  keeping a root entry point for combined applies without bases or overlays and
+  a root-owned `webapp-mysql` Namespace.
   The webapp child remains empty until its manifests are added. Fixed the MySQL
   Deployment API version and replica count, and the PVC access modes field.
 - Renamed cloud cluster directories from `spoke-atlas/` to `atlas/`, using the domain
