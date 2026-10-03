@@ -8,4 +8,3 @@ spec:
   ports:
     - port: 3306
   clusterIP: None # to use pod ip only!
-

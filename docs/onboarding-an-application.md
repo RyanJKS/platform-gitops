@@ -38,3 +38,43 @@ images:
 The configured Azure overlays inherit zero replicas from their catalog bases. Add a replica patch
 only when enabling the workload. The default prevents unconfigured
 placeholder images from being started but does not make the scaffold a working application.
+
+## Sandbox webapp and MySQL
+
+`catalog/applications/sandbox/webapp-mysql/` is a sandbox with no bases or overlays.
+Its root Kustomization includes `mysql/` and `webapp/`. Each child has its own
+Kustomization and sets `namespace: webapp-mysql`, so it can be applied independently.
+The MySQL child includes its Deployment, Service, initialization ConfigMap,
+PersistentVolumeClaim, and StorageClass. The webapp child is currently empty; add
+its manifests and list them in `webapp/kustomization.yaml` before deploying it.
+Rendering the root currently produces five MySQL resources; rendering `webapp/`
+produces no resources.
+
+From the repository root, render the populated entry points without contacting a cluster:
+
+```sh
+kubectl kustomize catalog/applications/sandbox/webapp-mysql
+kubectl kustomize catalog/applications/sandbox/webapp-mysql/mysql
+```
+
+Before applying, select the intended sandbox cluster and create the `webapp-mysql`
+namespace if it does not already exist. The MySQL PVC requires a cluster with the
+Azure Disk provisioner declared by `mysql/storage-class.yaml`. Confirm that the
+cluster supports that provisioner and the configured storage parameters.
+
+From the sandbox directory, choose the scope to apply:
+
+```sh
+cd catalog/applications/sandbox/webapp-mysql
+kubectl apply -k .         # Apply all populated children.
+kubectl apply -k mysql/    # Apply only MySQL.
+# After adding the webapp manifests:
+kubectl apply -k webapp/   # Apply only the webapp.
+```
+
+Applying a child does not delete resources from its sibling. A webapp that uses
+MySQL still requires MySQL to be running. After applying MySQL, check
+`kubectl -n webapp-mysql rollout status deployment/mysql-deployment` and
+`kubectl -n webapp-mysql get pods,pvc,service`. If the PVC remains Pending,
+inspect its events with `kubectl -n webapp-mysql describe pvc azure-managed-disk-pvc`
+and confirm that the storage provisioner is available.

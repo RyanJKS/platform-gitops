@@ -1,4 +1,17 @@
-# Specs
+# Webapp and MySQL sandbox
+
+This sandbox uses nested Kustomizations without bases or overlays. The root includes
+both `mysql/` and `webapp/`; each child can also be rendered or applied independently.
+Both children target the `webapp-mysql` namespace.
+
+The MySQL manifests live in `mysql/`. The `webapp/` Kustomization is currently empty;
+add the webapp manifests there and list them in its `resources` before deploying it.
+Applying the root currently deploys only MySQL.
+
+See the [sandbox procedure](../../../../docs/onboarding-an-application.md#sandbox-webapp-and-mysql)
+for prerequisites, rendering, and apply commands.
+
+## Specs
 
 - Storage Class
 - Persistent Volumes

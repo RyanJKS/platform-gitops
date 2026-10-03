@@ -3,7 +3,7 @@ kind: PersistentVolumeClaim
 metadata:
   name: azure-managed-disk-pvc
 spec:
-  accessMode:
+  accessModes:
     - ReadWriteOnce
   # defined storage class to get volume from (could be an azure "managed" one where we use the one that azure installs in the cluster)
   storageClassName: managed-premium-retain-sc
