@@ -1,0 +1,11 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: managed-premium-retain-sc
+provisioner: kubernetes.io/azure-disk
+reclaimPolicy: Retain # only delete when cluster is deleted (default is delete when the deployment that uses it is deleted)
+volumeBindingMode: WaitForFirstConsumer # deploy only when respective workload is created (default is Immediate)
+allowVolumeExpansion: true
+parameters:
+  storageaccounttype: Premium_LRS
+  kind: managed

@@ -61,11 +61,14 @@ child points at its cluster overlay, described below. The catalog Deployment
 and Service preserve the functional settings from the upstream
 [intro example](https://github.com/RyanJKS/chaos-generator/tree/main/infrastructure/k8s/examples/intro),
 inspected on 2026-09-27: one replica, image `ryanjks/chaos-generator:v1`, and TCP port
-8501. Namespace is unset in both manifests so Argo CD supplies it. The base excludes
-NGINX Ingress and the commented probes targeting port 3000. UK South also selects
-cert-manager and its dedicated AppProject; see [HTTPS bootstrap](https.md).
-East US 2 still selects only chaos-generator. No new ingress controller is installed.
-Image pullability and application runtime have not been verified.
+8501. The base includes the `chaos-generator` Namespace and sets
+`namespace: chaos-generator` in its Kustomization. Direct applies and cluster
+overlays place the Deployment and Service in that namespace. The base excludes
+the Azure application routing Ingress and the commented probes targeting port
+3000. UK South also selects cert-manager and its dedicated AppProject; see
+[HTTPS bootstrap](https.md). East US 2 still selects only chaos-generator.
+No new ingress controller is installed. Image pullability and application runtime
+have not been verified.
 
 ### Override replicas and image tag for uks
 
@@ -124,6 +127,23 @@ kubectl kustomize clusters/azure/DEV-JKS/dev/eus2/atlas/aks-shared/argocd
 kubectl kustomize clusters/azure/DEV-JKS/dev/uks/atlas/aks-shared/applications/chaos-generator
 kubectl kustomize catalog/applications/chaos-generator
 ```
+
+To deploy the catalog base directly, select the intended Kubernetes context and
+run from the repository root:
+
+```sh
+kubectl apply -k catalog/applications/chaos-generator
+```
+
+This creates the namespace and applies its Deployment and Service. Use `-k`, not
+`-f`, for a directory containing `kustomization.yaml`: `-f` does not render
+Kustomize resources or apply its namespace setting. To deploy the UK South replica
+and image overrides directly, use `-k` with that cluster's application overlay
+path instead. Direct applies do not register an Argo CD Application; if Argo CD
+already manages these resources, its self-healing restores the Git configuration.
+The optional `ingress.yaml` is not selected by the base. After configuring Azure
+application routing, DNS, and cert-manager, apply that manifest separately with
+`-n chaos-generator` if ingress access is required.
 
 After the changes reach Git and Terraform creates the root, verify the selected
 cluster context, then run:
