@@ -16,6 +16,10 @@
 
 ### Changed
 
+- Increased UK South sandbox webapp limits to one CPU and `1Gi` memory, with
+  requests of `250m` CPU and `512Mi` memory. Capped the Java heap at `512Mi` to
+  leave room for non-heap memory and avoid the observed `OOMKilled` startup loop.
+  Added commands for diagnosing restarts and checking browser connectivity.
 - The UK South webapp/MySQL sandbox now selects `StandardSSD_LRS` disks so MySQL
   can attach storage on `Standard_D2_v5` nodes. Existing PVC references and the
   catalog's Premium disk default remain unchanged; documented data-preserving

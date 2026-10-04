@@ -70,6 +70,10 @@ at one replica. It also selects `StandardSSD_LRS` for the Azure Disk StorageClas
 because `Standard_D2_v5` nodes cannot attach `Premium_LRS` disks. The legacy
 StorageClass name `managed-premium-retain-sc` stays unchanged to preserve existing
 PVC references; the catalog default remains `Premium_LRS`.
+The webapp container requests `250m` CPU and `512Mi` memory, with limits of one CPU
+and `1Gi` memory. `JAVA_OPTS=-Xms128m -Xmx512m` caps the Java heap at `512Mi`,
+leaving memory for native allocations, thread stacks, and Tomcat. These settings
+are specific to the UK South overlay; the catalog resource defaults stay unchanged.
 Kustomize replica targets must match the Deployment's
 `metadata.name`, not its container name or Pod labels.
 
@@ -112,6 +116,39 @@ the webapp independently. After applying MySQL, check
 `kubectl -n webapp-mysql get pods,pvc,service`. If the PVC remains Pending,
 inspect its events with `kubectl -n webapp-mysql describe pvc azure-managed-disk-pvc`
 and confirm that the storage provisioner is available.
+
+### Diagnose webapp restarts and browser access
+
+Use these commands in the intended sandbox cluster context:
+
+```sh
+kubectl -n webapp-mysql get pods -l app=webapp
+kubectl -n webapp-mysql describe pod <webapp-pod>
+kubectl -n webapp-mysql top pods --containers
+kubectl -n webapp-mysql logs <webapp-pod> -c webapp --previous --tail=100
+kubectl -n webapp-mysql logs <webapp-pod> -c webapp --tail=100
+```
+
+Increasing restart counts and `Last State: Terminated` with `Reason: OOMKilled`
+and exit code `137` identify a memory failure. Exit code `137` alone is not proof
+of an out-of-memory failure. Compare memory usage with the container limit in
+`describe pod`; `top` is a current sample, so usage can be low immediately after
+a restart. Previous logs show the terminated container's last startup attempt.
+They can stop abruptly before the HTTP server finishes starting.
+
+After changing resources, verify the rollout and HTTP response:
+
+```sh
+kubectl -n webapp-mysql rollout status deployment/webapp-deployment --timeout=300s
+kubectl -n webapp-mysql get service webapp-svc
+kubectl -n webapp-mysql get endpointslice -l kubernetes.io/service-name=webapp-svc
+curl -I --connect-timeout 5 --max-time 15 http://<external-ip>/
+```
+
+The Service exposes HTTP on port `80`, forwarding to container port `8080`.
+It does not configure HTTPS. An HTTP response, including a login redirect, confirms
+that the request reaches a web server. This Deployment has no readiness probe, so
+`Running` or a completed rollout alone does not prove the application serves HTTP.
 
 ### Recover an existing Premium disk on UK South sandbox
 
