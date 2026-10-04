@@ -8,3 +8,13 @@ spec:
   ports:
     - port: 3306
   clusterIP: None # to use pod ip only!
+
+
+# External Name service that maps an external resource into a service name that pods can connect to!
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: mysql   # this needs to match the DB_HOSTNAME variable as its querying the internal service within k8s
+# spec:
+#   type: ExternalName
+#   externalName: <>.database.azure.com
