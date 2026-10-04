@@ -41,10 +41,10 @@ spec:
           resources:
             requests:
               cpu: 100m
-              memory: 100Mi
+              memory: 256Mi
             limits:
               cpu: 100m
-              memory: 100Mi
+              memory: 512Mi
           env:
             - name: DB_HOSTNAME
               valueFrom:
