@@ -6,3 +6,14 @@ data:
   mysql_usermgmt.sql: |- # creates a .sql file script
     DROP DATABASE IF EXISTS webappdb;
     CREATE DATABASE webappdb;
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-configs
+data:
+  db_hostname: "mysql"
+  db_port: "3306"
+  db_name: "webappdb"
+  db_username: "root"
+  db_password: "SecurePassword@1"

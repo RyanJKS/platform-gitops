@@ -17,7 +17,10 @@ spec:
           image: mysql:5.6
           env:
             - name: MYSQL_ROOT_PASSWORD
-              value: securepassword@1
+              valueFrom:
+                configMapKeyRef:
+                  name: mysql-configs
+                  key: db_password
           ports:
             - containerPort: 3306
               name: mysql
