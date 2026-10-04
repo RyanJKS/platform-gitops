@@ -16,6 +16,9 @@
 
 ### Changed
 
+- Fixed the UK South sandbox replica target to use `webapp-deployment`, restoring
+  manifest generation for the `webapp-mysql-pv` Argo CD Application while keeping
+  three webapp replicas and one MySQL replica.
 - Named the sandbox MySQL Service `mysql` to match its connection hostname and
   init container check. Updated the diagram and documented Service DNS naming.
 - Split the webapp/MySQL sandbox into nested `mysql/` and `webapp/` Kustomizations,

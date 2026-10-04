@@ -62,6 +62,28 @@ kubectl kustomize catalog/applications/sandbox/webapp-mysql-pv/mysql
 kubectl kustomize catalog/applications/sandbox/webapp-mysql-pv/webapp
 ```
 
+The UK South sandbox Argo CD Application `webapp-mysql-pv` watches the
+`dev/sandbox` revision and renders
+`clusters/azure/DEV-JKS/dev/uks/sandbox/aks-app-routing/applications/webapp-mysql-pv/`.
+This cluster overlay sets `webapp-deployment` to three replicas and leaves MySQL
+at one replica. Kustomize replica targets must match the Deployment's
+`metadata.name`, not its container name or Pod labels.
+
+Render the same source as Argo CD before committing changes:
+
+```sh
+kubectl kustomize clusters/azure/DEV-JKS/dev/uks/sandbox/aks-app-routing/applications/webapp-mysql-pv
+```
+
+If Argo CD reports `Unknown` with a `ComparisonError`, inspect
+`kubectl -n argocd get application webapp-mysql-pv -o yaml` in the intended
+cluster context. A replica target named `webapp` fails manifest generation
+because the Deployment is named `webapp-deployment`. Correct the target in Git,
+commit and push to `dev/sandbox`, then refresh the Application with
+`argocd app get webapp-mysql-pv --hard-refresh` using the matching Argo CD server.
+The Application uses automated sync. Disabled sync retries do not cause this
+manifest-generation failure.
+
 Before applying, select the intended sandbox cluster. Applying the root creates
 the `webapp-mysql` namespace. Before applying a child independently, create the
 namespace with `kubectl apply -f namespace.yaml` from the sandbox directory if it

@@ -3,5 +3,5 @@ kind: Kustomization
 resources:
   - ../../../../../../../../../catalog/applications/sandbox/webapp-mysql-pv
 replicas:
-  - name: webapp
+  - name: webapp-deployment
     count: 3
