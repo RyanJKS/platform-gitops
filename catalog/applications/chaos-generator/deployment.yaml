@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: chaos-generator-container
-          image: ryanjks/chaos-generator:v1
+          image: ryanjks/chaos-generator:757afd
           ports:
             - containerPort: 8501
 
@@ -26,4 +26,3 @@ spec:
     rollingUpdate:
       maxUnavailable: 1 # Specifies the maximum number of Pods that can be unavailable during the update.
       maxSurge: 1 # Specifies the maximum number of Pods that can be created over the desired number of Pods.
-

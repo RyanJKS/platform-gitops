@@ -4,6 +4,8 @@
 
 ### Added
 
+- An end-to-end Mermaid diagram for the `webapp-mysql-pv` sandbox, covering the
+  selected webapp and MySQL resources and persistent storage.
 - Optional ARC controller and runner scale-set catalog defaults, namespace bases, validated examples, and onboarding guidance.
 
 - Shared platform defaults, namespaces, gateway resources, and workload bases with minimal cluster overlays.
@@ -14,6 +16,24 @@
 
 ### Changed
 
+- Increased UK South sandbox webapp limits to one CPU and `1Gi` memory, with
+  requests of `250m` CPU and `512Mi` memory. Capped the Java heap at `512Mi` to
+  leave room for non-heap memory and avoid the observed `OOMKilled` startup loop.
+  Added commands for diagnosing restarts and checking browser connectivity.
+- The UK South webapp/MySQL sandbox now selects `StandardSSD_LRS` disks so MySQL
+  can attach storage on `Standard_D2_v5` nodes. Existing PVC references and the
+  catalog's Premium disk default remain unchanged; documented data-preserving
+  disk conversion and the one-time StorageClass replacement.
+- Fixed the UK South sandbox replica target to use `webapp-deployment`, restoring
+  manifest generation for the `webapp-mysql-pv` Argo CD Application while keeping
+  three webapp replicas and one MySQL replica.
+- Named the sandbox MySQL Service `mysql` to match its connection hostname and
+  init container check. Updated the diagram and documented Service DNS naming.
+- Split the webapp/MySQL sandbox into nested `mysql/` and `webapp/` Kustomizations,
+  keeping a root entry point for combined applies without bases or overlays and
+  a root-owned `webapp-mysql` Namespace.
+  The webapp child includes its Deployment and Service. Fixed the MySQL
+  Deployment API version and replica count, and the PVC access modes field.
 - Renamed cloud cluster directories from `spoke-atlas/` to `atlas/`, using the domain
   name directly. Updated Application paths, validation fixtures, and documentation;
   external root owners must update their source paths to match.

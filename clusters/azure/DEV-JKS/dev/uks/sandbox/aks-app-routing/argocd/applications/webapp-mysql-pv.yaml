@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: webapp-mysql-pv
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/RyanJKS/platform-gitops.git
+    targetRevision: dev/sandbox
+    path: clusters/azure/DEV-JKS/dev/uks/sandbox/aks-app-routing/applications/webapp-mysql-pv
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

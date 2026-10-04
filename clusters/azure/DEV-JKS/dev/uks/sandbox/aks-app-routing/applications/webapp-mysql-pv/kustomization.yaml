@@ -1,0 +1,42 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../../../../../../../../catalog/applications/sandbox/webapp-mysql-pv
+replicas:
+  - name: webapp-deployment
+    count: 3
+patches:
+  - target:
+      group: storage.k8s.io
+      version: v1
+      kind: StorageClass
+      name: managed-premium-retain-sc
+    patch: |-
+      - op: replace
+        path: /parameters/storageaccounttype
+        value: StandardSSD_LRS
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: webapp-deployment
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: webapp-deployment
+      spec:
+        template:
+          spec:
+            containers:
+              - name: webapp
+                resources:
+                  requests:
+                    cpu: 250m
+                    memory: 512Mi
+                  limits:
+                    cpu: "1"
+                    memory: 1Gi
+                env:
+                  - name: JAVA_OPTS
+                    value: "-Xms128m -Xmx512m"

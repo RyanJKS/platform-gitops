@@ -1,0 +1,75 @@
+# https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp-deployment
+  labels:
+    app: webapp-deployment
+spec:
+  selector:
+    matchLabels:
+      app: webapp
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: webapp
+      labels:
+        app: webapp
+    spec:
+      initContainers:
+        # Init containers are exactly like regular containers, except:
+        # - Init containers always run to completion.
+        # - Each init container must complete successfully before the next one starts.
+        - name: init-db
+          image: busybox:1.31
+          command:
+            [
+              "sh",
+              "-c",
+              'echo -e "Check MYSQLDB server status"; while ! nc -z mysql 3306; do sleep 1; printf "-"; done; echo -e ">> MySQL server has started";',
+            ]
+      containers:
+        - name: webapp
+          image: stacksimplify/kube-usermgmt-webapp:1.0.0-MySQLDB
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 100m
+              memory: 512Mi
+          env:
+            - name: DB_HOSTNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: mysql-configs
+                  key: db_hostname
+            - name: DB_PORT
+              value: "3306"
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: mysql-configs
+                  key: db_name
+            - name: DB_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: mysql-configs
+                  key: db_username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secrets
+                  key: db_password
+
+          ports:
+            - containerPort: 8080
+              name: myjob
+      restartPolicy: Always
