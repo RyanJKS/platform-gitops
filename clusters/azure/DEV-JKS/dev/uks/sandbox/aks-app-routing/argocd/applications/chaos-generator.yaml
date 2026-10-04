@@ -7,7 +7,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/RyanJKS/platform-gitops.git
-    targetRevision: main
+    targetRevision: dev/sandbox
     path: clusters/azure/DEV-JKS/dev/uks/sandbox/aks-app-routing/applications/chaos-generator
   destination:
     server: https://kubernetes.default.svc
