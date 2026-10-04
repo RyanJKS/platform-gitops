@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
   - ../../../../../../../../catalog/platform/cert-manager
   - applications/chaos-generator.yaml
+  - applications/webapp-mysql-pv.yaml
