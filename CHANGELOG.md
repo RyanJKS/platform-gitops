@@ -4,6 +4,8 @@
 
 ### Added
 
+- An end-to-end Mermaid diagram for the `webapp-mysql-pv` sandbox, covering the
+  selected webapp and MySQL resources and persistent storage.
 - Optional ARC controller and runner scale-set catalog defaults, namespace bases, validated examples, and onboarding guidance.
 
 - Shared platform defaults, namespaces, gateway resources, and workload bases with minimal cluster overlays.
@@ -14,10 +16,12 @@
 
 ### Changed
 
+- Named the sandbox MySQL Service `mysql` to match its connection hostname and
+  init container check. Updated the diagram and documented Service DNS naming.
 - Split the webapp/MySQL sandbox into nested `mysql/` and `webapp/` Kustomizations,
   keeping a root entry point for combined applies without bases or overlays and
   a root-owned `webapp-mysql` Namespace.
-  The webapp child remains empty until its manifests are added. Fixed the MySQL
+  The webapp child includes its Deployment and Service. Fixed the MySQL
   Deployment API version and replica count, and the PVC access modes field.
 - Renamed cloud cluster directories from `spoke-atlas/` to `atlas/`, using the domain
   name directly. Updated Application paths, validation fixtures, and documentation;

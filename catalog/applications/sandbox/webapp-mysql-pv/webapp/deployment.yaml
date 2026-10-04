@@ -18,7 +18,7 @@ spec:
   template:
     metadata:
       annotations:
-        kubectl.kubernetes.io/default-container: webapp-container
+        kubectl.kubernetes.io/default-container: webapp
       labels:
         app: webapp
     spec:
@@ -30,13 +30,13 @@ spec:
           image: busybox:1.31
           command:
             [
-              "-sh",
+              "sh",
               "-c",
               'echo -e "Check MYSQLDB server status"; while ! nc -z mysql 3306; do sleep 1; printf "-"; done; echo -e ">> MySQL server has started";',
             ]
       containers:
         - name: webapp
-          image: stacksimplify/kube-usermgmt-werbapp:1.0.0-MySQLDB
+          image: stacksimplify/kube-usermgmt-webapp:1.0.0-MySQLDB
           imagePullPolicy: Always
           resources:
             requests:
@@ -50,9 +50,9 @@ spec:
               valueFrom:
                 configMapKeyRef:
                   name: mysql-configs
-                  key: db_host
+                  key: db_hostname
             - name: DB_PORT
-              value: 3306
+              value: "3306"
             - name: DB_NAME
               valueFrom:
                 configMapKeyRef:
@@ -72,7 +72,4 @@ spec:
           ports:
             - containerPort: 8080
               name: myjob
-          volumeMounts:
-            - name: localtime
-              mountPath: /etc/localtime
       restartPolicy: Always

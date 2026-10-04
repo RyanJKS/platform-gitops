@@ -5,9 +5,9 @@ This sandbox uses nested Kustomizations without bases or overlays. The root incl
 independently. Both children target the `webapp-mysql` namespace. Applying the root
 creates this namespace; applying a child alone requires the namespace to exist first.
 
-The MySQL manifests live in `mysql/`. The `webapp/` Kustomization is currently empty;
-add the webapp manifests there and list them in its `resources` before deploying it.
-Applying the root currently creates the namespace and deploys MySQL.
+The MySQL manifests live in `mysql/`. The webapp Deployment and Service live in
+`webapp/` and are included in its Kustomization. The root renders the namespace
+and both workloads.
 
 See the [sandbox procedure](../../../../docs/onboarding-an-application.md#sandbox-webapp-and-mysql)
 for prerequisites, rendering, and apply commands.
@@ -23,9 +23,89 @@ for prerequisites, rendering, and apply commands.
 
 - Init Containers
 
-## Setup
+## End-to-end setup
 
-User - > Load Balancer (Service) -> Web App (deployment) -> MySQL Ip (Cluster IP Service) -> MySQL (Deployment)
+The diagram shows the intended request path and the MySQL initialization and
+persistent storage setup. Both workloads are included in the root Kustomization.
+Kubernetes controllers and the
+Azure storage provisioner create the Pods, PersistentVolume, and backing disk;
+these are not separate manifests in this sandbox.
+
+```mermaid
+flowchart TB
+    USER["User"]
+
+    subgraph AZURE["Azure"]
+        subgraph CLUSTER["Kubernetes cluster"]
+            subgraph NS["Namespace: webapp-mysql"]
+                WEB_SVC["webapp-svc<br/>LoadBalancer: port 80"]
+                WEB_DEP["webapp-deployment"]
+                WEB_POD["Webapp Pod<br/>HTTP port 8080"]
+                INIT["init-db<br/>Wait for MySQL TCP port 3306"]
+                DB_SVC["mysql<br/>Headless Service: port 3306"]
+                DB_DEP["mysql-deployment<br/>1 replica; Recreate strategy"]
+                DB_POD["MySQL Pod<br/>mysql:5.6; database: webappdb"]
+                SETTINGS["ConfigMap: mysql-configs<br/>Database connection settings"]
+                SQL["ConfigMap: user-management-dbcreation-script<br/>mysql_usermgmt.sql"]
+                PVC["PVC: azure-managed-disk-pvc<br/>5Gi; ReadWriteOnce"]
+
+                WEB_SVC -->|"HTTP: port 8080"| WEB_POD
+                WEB_DEP -->|"Creates through ReplicaSet"| WEB_POD
+                INIT -->|"Completes before webapp container starts"| WEB_POD
+                INIT -->|"TCP readiness check"| DB_SVC
+                WEB_POD -->|"SQL connection: port 3306"| DB_SVC
+                SETTINGS -->|"DB environment variables"| WEB_POD
+                SETTINGS -->|"MYSQL_ROOT_PASSWORD"| DB_POD
+                DB_SVC -->|"Resolves MySQL Pod IP"| DB_POD
+                DB_DEP -->|"Creates through ReplicaSet"| DB_POD
+                SQL -->|"Mount at /docker-entrypoint-initdb.d"| DB_POD
+                DB_POD -->|"Mount at /var/lib/mysql"| PVC
+            end
+
+            SC["StorageClass: managed-premium-retain-sc<br/>Premium_LRS; Retain; WaitForFirstConsumer"]
+            PROVISIONER["Azure Disk provisioner<br/>Declared driver: kubernetes.io/azure-disk"]
+            PV["PersistentVolume<br/>Provisioned dynamically; cluster-scoped"]
+
+            PVC -->|"storageClassName"| SC
+            SC -->|"Provisioning settings"| PROVISIONER
+            PVC -->|"Provision after MySQL Pod is scheduled"| PROVISIONER
+            PROVISIONER -->|"Creates"| PV
+            PV <-->|"Bound claim"| PVC
+        end
+
+        DISK["Azure managed disk<br/>Persistent MySQL data"]
+        PROVISIONER -->|"Allocates"| DISK
+        PV -->|"References backing storage"| DISK
+    end
+
+    USER -->|"HTTP: port 80"| WEB_SVC
+```
+
+The SQL initialization script runs when MySQL initializes an empty data directory;
+it does not run on every Pod restart with an existing database. The PVC preserves
+database files across Pod replacement. The StorageClass's `Retain` policy retains
+the PersistentVolume and backing storage after the claim is deleted; reclaiming
+that storage requires manual administration.
+
+### Service name and database hostname
+
+The Service's `metadata.name` defines its Kubernetes DNS hostname. The MySQL
+Service is named `mysql`, so the `mysql-configs` ConfigMap sets
+`db_hostname: "mysql"` and the webapp init container checks `mysql:3306`. The short
+hostname works because both workloads are in the `webapp-mysql` namespace.
+Because this Service is headless, its DNS records resolve to the selected MySQL
+Pod IP addresses.
+
+The Deployment name and the `app: mysql` selector label do not define this DNS
+hostname. The selector tells the Service which Pods to expose. If you rename the
+Service, update the ConfigMap hostname and init container's readiness check to
+match; creating a Service with a different name does not create an alias for
+`mysql`.
+
+### Credentials
+
+Database credentials currently come from a ConfigMap; move passwords to a Secret
+before using this outside the sandbox.
 
 ## Kustomize
 
