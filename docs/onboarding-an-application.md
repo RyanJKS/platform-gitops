@@ -66,7 +66,11 @@ The UK South sandbox Argo CD Application `webapp-mysql-pv` watches the
 `dev/sandbox` revision and renders
 `clusters/azure/DEV-JKS/dev/uks/sandbox/aks-app-routing/applications/webapp-mysql-pv/`.
 This cluster overlay sets `webapp-deployment` to three replicas and leaves MySQL
-at one replica. Kustomize replica targets must match the Deployment's
+at one replica. It also selects `StandardSSD_LRS` for the Azure Disk StorageClass
+because `Standard_D2_v5` nodes cannot attach `Premium_LRS` disks. The legacy
+StorageClass name `managed-premium-retain-sc` stays unchanged to preserve existing
+PVC references; the catalog default remains `Premium_LRS`.
+Kustomize replica targets must match the Deployment's
 `metadata.name`, not its container name or Pod labels.
 
 Render the same source as Argo CD before committing changes:
@@ -108,3 +112,45 @@ the webapp independently. After applying MySQL, check
 `kubectl -n webapp-mysql get pods,pvc,service`. If the PVC remains Pending,
 inspect its events with `kubectl -n webapp-mysql describe pvc azure-managed-disk-pvc`
 and confirm that the storage provisioner is available.
+
+### Recover an existing Premium disk on UK South sandbox
+
+An existing bound PVC keeps its disk when the StorageClass changes. If MySQL is
+stuck in `ContainerCreating` with `FailedAttachVolume` because the node does not
+support Premium storage, convert that disk without deleting the PVC or PV.
+Use the intended cluster context and an Azure account with permission to update
+the disk. From the repository root:
+
+```sh
+pv_name=$(kubectl -n webapp-mysql get pvc azure-managed-disk-pvc -o jsonpath='{.spec.volumeName}')
+disk_id=$(kubectl get pv "$pv_name" -o jsonpath='{.spec.azureDisk.diskURI}')
+az disk show --ids "$disk_id" --query '{sku:sku.name,state:diskState,managedBy:managedBy}' -o json
+```
+
+These manifests currently use the migrated Azure Disk volume format, so the
+disk ID is in `spec.azureDisk.diskURI`. Confirm the disk is `Unattached` and
+`managedBy` is null before conversion. If attached, first plan a controlled
+workload stop and wait for detachment; do not convert an attached disk.
+
+```sh
+az disk update --ids "$disk_id" --sku StandardSSD_LRS
+kubectl -n webapp-mysql rollout status deployment/mysql-deployment --timeout=300s
+kubectl -n webapp-mysql rollout status deployment/webapp-deployment --timeout=300s
+```
+
+Azure limits storage-tier changes to twice per day. Kubernetes retries the disk
+attachment automatically; the existing PVC and PV remain bound to the same disk.
+
+StorageClass parameters are immutable. After publishing the overlay change to
+`dev/sandbox`, replacing only the StorageClass is a one-time migration step:
+
+```sh
+kubectl kustomize clusters/azure/DEV-JKS/dev/uks/sandbox/aks-app-routing/applications/webapp-mysql-pv \
+  | yq 'select(.kind == "StorageClass")' > /tmp/webapp-mysql-storage-class.yaml
+kubectl replace --force -f /tmp/webapp-mysql-storage-class.yaml
+```
+
+This recreates only the StorageClass, preserving the bound PVC, PV, and disk.
+Review other consumers before replacement. Do not force-replace the complete
+application or its PVC. Refresh the Argo CD Application after migration and verify
+that it reports `Synced` and `Healthy`.

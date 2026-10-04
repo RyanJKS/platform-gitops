@@ -5,3 +5,13 @@ resources:
 replicas:
   - name: webapp-deployment
     count: 3
+patches:
+  - target:
+      group: storage.k8s.io
+      version: v1
+      kind: StorageClass
+      name: managed-premium-retain-sc
+    patch: |-
+      - op: replace
+        path: /parameters/storageaccounttype
+        value: StandardSSD_LRS

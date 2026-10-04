@@ -87,6 +87,12 @@ database files across Pod replacement. The StorageClass's `Retain` policy retain
 the PersistentVolume and backing storage after the claim is deleted; reclaiming
 that storage requires manual administration.
 
+The diagram shows the catalog default `Premium_LRS`. The UK South sandbox cluster
+overlay overrides the disk type to `StandardSSD_LRS` for `Standard_D2_v5` nodes.
+It keeps the legacy StorageClass name to preserve PVC references. See the
+[existing disk recovery procedure](../../../../docs/onboarding-an-application.md#recover-an-existing-premium-disk-on-uk-south-sandbox)
+for disk conversion and the one-time StorageClass replacement.
+
 ### Service name and database hostname
 
 The Service's `metadata.name` defines its Kubernetes DNS hostname. The MySQL

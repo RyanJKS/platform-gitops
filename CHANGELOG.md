@@ -16,6 +16,10 @@
 
 ### Changed
 
+- The UK South webapp/MySQL sandbox now selects `StandardSSD_LRS` disks so MySQL
+  can attach storage on `Standard_D2_v5` nodes. Existing PVC references and the
+  catalog's Premium disk default remain unchanged; documented data-preserving
+  disk conversion and the one-time StorageClass replacement.
 - Fixed the UK South sandbox replica target to use `webapp-deployment`, restoring
   manifest generation for the `webapp-mysql-pv` Argo CD Application while keeping
   three webapp replicas and one MySQL replica.
