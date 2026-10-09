@@ -1,0 +1,14 @@
+fullnameOverride: ingress-agic
+rbac:
+  enabled: true
+armAuth:
+  type: workloadIdentity
+appgw:
+  shared: false
+  usePrivateIP: false
+kubernetes:
+  ingressClassResource:
+    enabled: true
+    name: azure-application-gateway
+    default: false
+    controllerValue: azure/application-gateway

@@ -1,31 +1,26 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: cert-manager
+  name: external-dns
   namespace: argocd
 spec:
   project: platform-apps
   sources:
-    - repoURL: https://charts.jetstack.io
-      chart: cert-manager
-      targetRevision: v1.20.4
+    - repoURL: https://kubernetes-sigs.github.io/external-dns/
+      chart: external-dns
+      targetRevision: 1.19.0
       helm:
-        releaseName: cert-manager
+        releaseName: external-dns
+        skipTests: true
         valueFiles:
-          - $values/catalog/platform/cert-manager/values.yaml
+          - $values/catalog/platform/external-dns/values.yaml
     - repoURL: https://github.com/RyanJKS/platform-gitops.git
       targetRevision: main
       ref: values
   destination:
     server: https://kubernetes.default.svc
-    namespace: cert-manager
+    namespace: external-dns
   syncPolicy:
-    retry:
-      limit: 5
-      backoff:
-        duration: 10s
-        factor: 2
-        maxDuration: 3m
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

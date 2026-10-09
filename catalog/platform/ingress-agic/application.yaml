@@ -1,31 +1,25 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: cert-manager
+  name: ingress-agic
   namespace: argocd
 spec:
   project: platform-apps
   sources:
-    - repoURL: https://charts.jetstack.io
-      chart: cert-manager
-      targetRevision: v1.20.4
+    - repoURL: mcr.microsoft.com/azure-application-gateway/charts
+      chart: ingress-azure
+      targetRevision: 1.8.1
       helm:
-        releaseName: cert-manager
+        releaseName: ingress-agic
         valueFiles:
-          - $values/catalog/platform/cert-manager/values.yaml
+          - $values/catalog/platform/ingress-agic/values.yaml
     - repoURL: https://github.com/RyanJKS/platform-gitops.git
       targetRevision: main
       ref: values
   destination:
     server: https://kubernetes.default.svc
-    namespace: cert-manager
+    namespace: ingress-agic
   syncPolicy:
-    retry:
-      limit: 5
-      backoff:
-        duration: 10s
-        factor: 2
-        maxDuration: 3m
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

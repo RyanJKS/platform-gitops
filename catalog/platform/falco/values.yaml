@@ -1,0 +1,16 @@
+controller:
+  kind: daemonset
+
+# Modern eBPF requires a compatible host kernel with BTF support.
+driver:
+  kind: modern_ebpf
+  modernEbpf:
+    leastPrivileged: true
+  loader:
+    enabled: false
+
+falco:
+  json_output: true
+
+falcosidekick:
+  enabled: false

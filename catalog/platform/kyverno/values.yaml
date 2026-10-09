@@ -1,0 +1,7 @@
+crds:
+  install: true
+
+# Argo CD does not execute Helm pre-delete hooks. Remove webhooks explicitly
+# during decommissioning before stopping the admission controller.
+webhooksCleanup:
+  enabled: false

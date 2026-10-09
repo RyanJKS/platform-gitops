@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: external-dns-azure
+data:
+  azure.json: |
+    {
+      "cloud": "AzurePublicCloud",
+      "useWorkloadIdentityExtension": true
+    }
