@@ -1,0 +1,58 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: apps
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  description: Workload applications, excluding platform and system namespaces.
+  sourceRepos:
+    - https://github.com/RyanJKS/platform-gitops.git
+  destinations:
+    - namespace: "!argocd"
+      server: "*"
+    - namespace: "!cert-manager"
+      server: "*"
+    - namespace: "!default"
+      server: "*"
+    - namespace: "!external-secrets"
+      server: "*"
+    - namespace: "!external-dns"
+      server: "*"
+    - namespace: "!gateway"
+      server: "*"
+    - namespace: "!ingress-nginx"
+      server: "*"
+    - namespace: "!ingress-agic"
+      server: "*"
+    - namespace: "!kube-system"
+      server: "*"
+    - namespace: "!kube-public"
+      server: "*"
+    - namespace: "!kube-node-lease"
+      server: "*"
+    - namespace: "!observability"
+      server: "*"
+    - namespace: "!kyverno"
+      server: "*"
+    - namespace: "!falco"
+      server: "*"
+    - namespace: "*"
+      server: "*"
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+    - group: ""
+      kind: PersistentVolume
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  roles:
+    - name: contributor
+      description: Manage workload Applications without platform or root access.
+      groups: []
+      policies:
+        - p, proj:apps:contributor, applications, *, apps/*, allow
+        - p, proj:apps:contributor, repositories, get, apps/*, allow
+        - p, proj:apps:contributor, logs, get, apps/*, allow

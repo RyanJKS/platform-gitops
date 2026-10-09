@@ -1,0 +1,9 @@
+- op: replace
+  path: /metadata/annotations/cert-manager.io~1cluster-issuer
+  value: letsencrypt-staging
+- op: replace
+  path: /spec/ingressClassName
+  value: azure-application-gateway
+- op: replace
+  path: /spec/rules/0/host
+  value: chaos.jhelan.site

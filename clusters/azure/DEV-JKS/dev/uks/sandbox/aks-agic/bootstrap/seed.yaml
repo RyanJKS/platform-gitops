@@ -1,0 +1,51 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: bootstrap
+  namespace: argocd
+spec:
+  clusterResourceWhitelist: []
+  description: Admin-only ownership of cluster AppProjects and Applications.
+  destinations:
+  - namespace: argocd
+    server: https://kubernetes.default.svc
+  namespaceResourceWhitelist:
+  - group: argoproj.io
+    kind: AppProject
+  - group: argoproj.io
+    kind: Application
+  sourceRepos:
+  - https://github.com/RyanJKS/platform-gitops.git
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: default
+  namespace: argocd
+spec:
+  clusterResourceWhitelist: []
+  description: Unused in this cluster; explicit projects are required.
+  destinations: []
+  namespaceResourceWhitelist: []
+  sourceRepos: []
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: all-apps
+  namespace: argocd
+spec:
+  destination:
+    namespace: argocd
+    server: https://kubernetes.default.svc
+  project: bootstrap
+  source:
+    path: clusters/azure/DEV-JKS/dev/uks/sandbox/aks-agic/argocd
+    repoURL: https://github.com/RyanJKS/platform-gitops.git
+    targetRevision: dev/sandbox
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+    - ServerSideApply=true

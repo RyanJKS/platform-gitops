@@ -1,0 +1,3 @@
+- op: replace
+  path: /spec/sources/1/targetRevision
+  value: dev/sandbox

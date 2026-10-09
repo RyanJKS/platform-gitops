@@ -1,0 +1,10 @@
+serviceAccount:
+  annotations:
+    azure.workload.identity/client-id: 6c0a90fd-4962-4860-8c4a-c279c3d36cca # TODO: Update when needed
+    azure.workload.identity/tenant-id: bac158f2-9dfe-4f66-b3e8-7fed8227d08f
+domainFilters:
+  - jhelan.site
+txtOwnerId: dev-uks-sandbox-aks-agic
+extraArgs:
+  - --azure-config-file=/etc/kubernetes/azure.json
+  - --ingress-class=azure-application-gateway
