@@ -6,4 +6,4 @@
   value: azure-application-gateway
 - op: replace
   path: /spec/rules/0/host
-  value: chaos.jhelan.site
+  value: chaos.jkslabs.site
