@@ -1,6 +1,6 @@
 - op: replace
   path: /metadata/annotations/cert-manager.io~1cluster-issuer
-  value: letsencrypt-staging
+  value: letsencrypt-prod
 - op: replace
   path: /spec/ingressClassName
   value: azure-application-gateway

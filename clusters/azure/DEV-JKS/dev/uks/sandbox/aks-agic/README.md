@@ -16,7 +16,7 @@ and `applications/`.
 Bootstrap also selects an AGIC Ingress for `argocd.jkslabs.site`, with TLS at
 Application Gateway and an HTTP Argo CD backend. Public access requires the three
 platform controllers; local bootstrap access uses `http://localhost:8080`.
-The certificate initially uses Let's Encrypt staging.
+The certificate uses Let's Encrypt production after staging validation was verified.
 
 All rendered Applications read Git configuration from `dev/sandbox`. Child
 Applications start with manual sync while Azure and DNS placeholders are configured.
