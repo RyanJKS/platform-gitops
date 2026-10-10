@@ -8,7 +8,7 @@ spec:
   sources:
     - repoURL: mcr.microsoft.com/azure-application-gateway/charts
       chart: ingress-azure
-      targetRevision: 1.8.1
+      targetRevision: 1.9.1
       helm:
         releaseName: ingress-agic
         valueFiles:
