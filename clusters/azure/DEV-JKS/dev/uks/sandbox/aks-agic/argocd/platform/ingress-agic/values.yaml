@@ -3,4 +3,4 @@ appgw:
   resourceGroup: SANDBOX-SHARED-UKS-DEV-RG
   name: sandboxuksdevagw
 armAuth:
-  identityClientID: 337789a1-2d22-47df-8085-c3570f7788f8 # TODO: Update when needed
+  identityClientID: 85511dca-d466-455a-97ec-dcf5c3b62f6e # TODO: Update when needed
