@@ -1,46 +1,42 @@
 # Contributing
 
 1. Create a branch from `main` and keep changes focused.
-2. Run `scripts/validate.sh` with the tool versions listed in `.github/workflows/validate.yaml`.
-   This needs network access for pinned charts and Kubernetes schemas.
-3. Review rendered resources for every affected cluster. Validation does not contact a Kubernetes API
-   and cannot confirm runtime readiness, cloud identities, DNS, or secret access.
-4. Update documentation and the changelog when behavior or operations change.
+2. Render affected cluster Kustomizations and review their resources.
+3. For Argo CD installation changes, lint and render the pinned official Helm chart with shared, cloud, and cluster values.
+4. Update documentation when behavior, configuration, or operations change.
 5. Open a pull request describing the problem, resulting behavior, and validation.
 
-Run the same strict documentation build as CI from the repository root:
+Local rendering and Helm lint check configuration. They do not contact the
+Kubernetes API or prove readiness, cloud permissions, DNS, or live resource
+ownership.
+
+For installation commands and value ordering, follow [bootstrap](docs/bootstrap.md).
+For example, render a managed cluster root from the repository root:
 
 ```sh
-docker run --rm -v "$PWD:/content" -w /content spotify/techdocs:v1.2.6 \
+kubectl kustomize clusters/azure/DEV-JKS/dev/uks/sandbox/aks-agic
+```
+
+Run the strict documentation build:
+
+```sh
+docker run --rm -v "$PWD:/content:ro" -w /content spotify/techdocs:v1.2.6 \
   build --strict --site-dir /tmp/site
 ```
 
-An existing MkDocs environment with `mkdocs-techdocs-core` can instead run
-`mkdocs build --strict --site-dir /tmp/platform-gitops-docs`.
-Keep `mkdocs.yml`, `docs/`, and the `dir:.` TechDocs annotation in `catalog-info.yaml` aligned.
-Do not commit generated documentation, secrets, local kubeconfig files, or infrastructure state.
-
-Require the `Manifests` and `TechDocs` jobs in branch protection. Chart version updates require
-review of upstream compatibility and migration notes. Dependabot maintains GitHub Actions only.
+Keep `mkdocs.yml`, `docs/`, and the `dir:.` TechDocs annotation in
+`catalog-info.yaml` aligned. Do not commit generated documentation, credentials,
+kubeconfig files, or infrastructure state.
 
 ## Configuration placement
 
-Read [configuration boundaries](docs/configuration-boundaries.md) before adding defaults or cluster features.
-Shared catalog changes must be portable across their consumers. Put permissions, namespace policy,
-quotas, networking, TLS, identities, storage, and operational sizing under the target cluster.
-Identical policy values are not a reason to centralize independent cluster decisions.
-Add the feature's validation and operational documentation in the same change.
+The [platform catalog](docs/platform-catalog.md) owns reusable definitions and
+shared defaults. Cluster files select components and override identities,
+permissions, namespaces, domains, storage, and operational sizing. Review all
+selected consumers when changing a shared default.
 
-Manifest validation also requires Go (version declared in
-`scripts/render-applications/go.mod`). This module now contains direct Application
-selection tests; the unused ApplicationSet expander has been removed. Run the tests
-with `cd scripts/render-applications && go test ./...`. The validator renders every
-cluster entry point and selected child source, including roots created by Terraform.
-
-Inspect a cluster without connecting to Kubernetes:
-
-```sh
-kubectl kustomize clusters/azure/DEV-JKS/dev/uks/atlas/aks-shared/argocd
-```
-
-Offline validation does not prove live ownership, controller readiness, or DNS.
+Argo CD installation values are consumed by its Helm or Terraform owner. Child
+Application values are consumed by Argo CD. Keep one active owner for each
+installation. Chart upgrades require review of upstream compatibility, CRD
+changes, selectors, and migration notes. Dependabot maintains GitHub Actions;
+chart and image pins receive deliberate review.

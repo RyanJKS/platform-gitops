@@ -1,102 +1,44 @@
 # Platform GitOps
 
-Declarative Kubernetes platform capabilities and application deployments, reconciled by Argo CD.
-Cluster provisioning, application source code, and image builds belong in other repositories.
+Declarative Kubernetes platform capabilities and application deployments,
+reconciled by Argo CD. Cluster provisioning, application source code, and image
+builds belong in other repositories.
 
-## Layout
+- `catalog/platform/`: reusable controller Applications, Helm values, and configuration.
+- `catalog/applications/`: reusable workload manifests.
+- `clusters/`: cluster selections, permissions, and deployment-specific overrides.
+- `docs/`: bootstrap, configuration, and debugging guides.
 
-- `bootstrap/`: shared bootstrap instructions and examples.
-- `clusters/.../bootstrap/root.yaml`: example roots; Terraform owns the Azure shared root.
-- `catalog/platform/`: component inputs, an ApplicationSet template, matching permission bases, optional policy profiles, and shared Helm values.
-- `catalog/applications/`: reusable workload bases.
-- `clusters/`: explicit cloud, subscription/account alias, environment, region, domain, and cluster configuration; only differences live here.
-- `docs/`: architecture and operational guides.
-- `scripts/validate.sh`: the same manifest checks used by CI.
+Cloud paths use
+`clusters/<cloud>/<account>/<environment>/<region>/<domain>/<cluster>/`.
 
-Cloud paths use `clusters/<cloud>/<account>/<environment>/<region>/<domain>/<cluster>/`.
-The domain (for example, `atlas`) represents the business area and its network spoke.
-Use the domain name directly, without a `spoke-` prefix. Local kind keeps its shorter layout.
+Terraform installs the official Argo CD chart with minimal chart defaults and
+creates the root Application. The root creates the AppProjects from Git. Shared catalog, Azure, and
+cluster values configure the GitOps self-management child after handoff.
+The AKS AGIC root then creates an Argo CD self-management child. Its automatic
+sync stays disabled until the documented ownership handoff completes.
 
-Cluster paths identify their deployment target directly:
+For the UK South AGIC sandbox, follow [bootstrap and handoff](docs/bootstrap.md).
+Projects and children use sync waves `-5` through `1`. After runtime values are
+applied, the root waits for each child to report `Synced` and `Healthy`. Minimal
+bootstrap lacks that health customization; verify initial children manually.
+Verify Azure access and routing separately. Pruning remains disabled.
 
-```text
-clusters/azure/DEV-JKS/dev/eus2/atlas/aks-shared/
-clusters/azure/DEV-JKS/dev/uks/atlas/aks-shared/
-clusters/azure/DEV-JKS/dev/eus2/atlas/aks-atlas-market/
-clusters/aws/personal-account/dev/eu-west-2/atlas/eks-shared/
-clusters/local/kind/kind-platform/
-```
-
-UK South (`clusters/azure/DEV-JKS/dev/uks/atlas/aks-shared/`) deploys
-cert-manager and `letsencrypt-prod`, preserving `chaos-generator`. East US 2 and
-market keep their existing selections. Local kind now has only `argocd/` and
-`applications/`, selects Argo CD only, and uses `bootstrap/local-kind.yaml` for its root.
-See [local kind bootstrap and migration](docs/local-kind.md). Unused GitHub Actions runner examples
-and defaults have been removed. Legacy monitoring, external-secrets, gateway, namespace-bundle, policy, and
-ApplicationSet scaffolding has been removed. Market retains its workload
-Applications, AppProject, and namespace; Gateway API ingress must be supplied
-separately. Review [legacy migration](docs/bootstrap.md#migrate-existing-platform-applications)
-before syncing a previously deployed root.
-
-## UK South HTTPS bootstrap
-
-Terraform owns AKS, Azure DNS permissions, the Microsoft Argo CD extension, and
-`all-apps`. Set the root revision to `main` and its path to the UK South `argocd/`
-directory after these changes reach that revision. The root creates the dedicated
-AppProject and one automated cert-manager Application. Chart resources reconcile
-in wave 0; the official startup API check runs as a Sync hook in wave 1; only then
-does wave 2 apply `letsencrypt-prod`. No manual Helm bootstrap is required.
-
-The chart is pinned to `v1.20.4` (supported Kubernetes 1.32–1.35). The inspected
-Terraform leaves Kubernetes version unset; confirm the actual version before rollout.
-Argo CD must support multiple sources (2.6+). No live deployment was performed.
-
-Delegate `jkslabs.site` to Azure DNS, attach that zone to AKS application routing,
-and retain its identity's DNS Zone Contributor role. Public DNS for
-`argocd.jkslabs.site` must resolve to the routing load balancer. Allow inbound TCP
-80 for HTTP-01 validation and 443 for HTTPS; port 80 is also needed at renewal.
-
-Update the extension through Terraform/Terragrunt, using its supported chart keys:
-`server.ingress.enabled=true`, hostname `argocd.jkslabs.site`, ingress class
-`webapprouting.kubernetes.azure.com`, `server.ingress.tls=true`, and annotation
-`cert-manager.io/cluster-issuer=letsencrypt-prod`. Preserve HTTPS backend protocol.
-The chart uses TLS Secret `argocd-server-tls` in `argocd`; cert-manager owns the
-certificate contents. See [exact external settings and compatibility](docs/https.md#extension-settings-outside-this-repository).
-Do not create another Ingress or patch extension-managed ConfigMaps.
-
-No ACME email is configured. Optionally add a real address at `spec.acme.email` in
-`catalog/platform/cert-manager/issuers/letsencrypt-prod.yaml`. The account Secret
-is generated by cert-manager; never commit account or certificate private keys.
-
-After rollout, inspect readiness in the intended cluster context:
+Render the child definitions from the repository root:
 
 ```sh
-kubectl -n argocd get applications
-kubectl -n cert-manager get deployments,pods,jobs
-kubectl get clusterissuer letsencrypt-prod
-kubectl wait --for=condition=Ready clusterissuer/letsencrypt-prod --timeout=300s
-kubectl -n argocd get ingress,certificate,certificaterequest
-kubectl -n argocd get orders.acme.cert-manager.io,challenges.acme.cert-manager.io
-kubectl -n argocd describe certificate argocd-server-tls
+kubectl kustomize clusters/azure/DEV-JKS/dev/uks/sandbox/aks-agic
 ```
 
-Read [HTTPS operations and pruning](docs/https.md), [bootstrap](docs/bootstrap.md),
-[configuration boundaries](docs/configuration-boundaries.md), and
-[application onboarding](docs/onboarding-an-application.md).
+Read [platform catalog selections](docs/platform-catalog.md) and
+[debugging](docs/debugging.md) before changing a live deployment. Terraform retains
+ownership of existing Azure extension-managed Argo CD installations.
 
-## Checks
-
-Install Bash, kubectl with Kustomize, Helm, Mike Farah's yq v4, and kubeconform, then run:
+Build documentation with the pinned TechDocs image:
 
 ```sh
-scripts/validate.sh
+docker run --rm -v "$PWD:/content:ro" -w /content spotify/techdocs:v1.2.6 \
+  build --strict --site-dir /tmp/site
 ```
 
-Validation needs network access to chart repositories and Kubernetes schemas. CI pins tool versions in
-[validate.yaml](.github/workflows/validate.yaml) and builds TechDocs using a container;
-no Python application or Python development toolchain is maintained here.
-See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution and documentation checks.
-
-Platform Applications are selected directly by each cluster entry point. See
-[adding a cluster](docs/adding-a-cluster.md) and the migration guides before changing
-live ownership or enabling pruning.
+Do not commit generated documentation, credentials, or infrastructure state.

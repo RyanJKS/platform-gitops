@@ -13,6 +13,14 @@ configuration under `spec.sources[0].helm.valuesObject`. No separate cluster
 `values.yaml` is needed for Argo CD, External DNS, or AGIC. The local app
 Kustomization imports its catalog Application and applies this single patch file.
 
+The AKS AGIC sandbox supplies a complete `valuesObject` with copied catalog
+defaults and its gateway and managed identity settings. Because the patch replaces
+the whole map, retain `armAuth.type: workloadIdentity`, `rbac.enabled: true`, and
+the shared gateway and ingress class settings when editing it. Keep copied defaults
+aligned with the catalog. Its empty `fullnameOverride` keeps the deployed chart-generated Deployment
+and ServiceAccount names, including the ServiceAccount subject used by the
+existing Azure federated credential.
+
 The AKS AGIC sandbox's Argo CD patch contains a complete `valuesObject`, combining
 defaults from `catalog/platform/argocd/application.yaml`, Azure settings from
 `catalog/platform/argocd/configs/azure/values.yaml`, and cluster overrides, in that
@@ -34,17 +42,28 @@ Chart versions, sync waves, and sync policy remain catalog defaults.
 
 ## Catalog sync defaults
 
-Platform and sandbox workload AppProjects use wave `-4`. Catalog Applications
+The AKS AGIC sandbox's platform and workload AppProjects use wave `-5`. Catalog Applications
 define their child sync waves: AGIC `-3`, External DNS `-2`,
-cert-manager `-1`, and chaos-generator `0`. They also enable automated sync and
+cert-manager `-4`, and chaos-generator `0`. They also enable automated sync and
 self-healing with pruning disabled. Cluster patches retain only deployment
 choices such as DNS provider, Git revision, and issuer or workload configuration.
 A cluster with different sync requirements must override the catalog defaults
 explicitly.
 Opt-in Kyverno and Falco use wave `-1` so their controllers also precede workloads.
 Lower waves apply first. Workloads without an annotation use wave `0`.
-Cert-manager chart hooks and issuer waves are evaluated
-inside its child Application and keep their existing values.
+The catalog defines cert-manager at wave `-4` and its root-managed ClusterIssuer
+at wave `-1`, before workloads. The issuer also uses
+`SkipDryRunOnMissingResource=true` so root validation succeeds before the child
+installs the cert-manager CRDs. Cluster overlays inherit these annotations and
+patch issuer deployment settings. The chart's API readiness hook remains in wave
+`1` inside the cert-manager child; its wave is separate from the root's waves.
+
+The API check's ServiceAccount, Role, and RoleBinding are explicit Argo CD `Sync`
+hooks in child wave `0`. Their deletion policy is `BeforeHookCreation`, so they
+remain available for the check Job in wave `1`. The Job uses
+`BeforeHookCreation,HookSucceeded` and is removed after success. Explicit Argo CD
+annotations override the chart's Helm hook defaults without depending on null
+values surviving serialization into a running sync operation.
 
 Waves order child Applications when their parent syncs. The shared Argo CD Helm values provide the Application health
 check that makes the parent wait for each child to report `Synced` and `Healthy`.
@@ -95,9 +114,10 @@ settings in `azure-values.yaml`, and deployment overrides in the cluster's
 consumes the selected values files and inline overrides after handoff.
 Terraform installs its own pinned minimal chart with chart defaults.
 
-Catalog `root_project.yaml` is a reusable GitOps AppProject base included in the
-Argo CD catalog Kustomization. The cluster root creates that `bootstrap` project
-before its self-management child. The infrastructure Application unit defines
+The cluster root creates the `platform-apps` AppProject before its Argo CD
+self-management child. That project allows `https://argoproj.github.io/argo-helm`,
+the `argocd` namespace, and the chart's resource types, including StatefulSets,
+Ingresses, and NetworkPolicies. The infrastructure Application unit defines
 `all-apps` inline in the built-in `default` project and selects the cluster root
 on `dev/sandbox`. Terraform does not create a separate AppProject.
 

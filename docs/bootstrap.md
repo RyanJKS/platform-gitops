@@ -1,10 +1,11 @@
 # Bootstrap Argo CD and transfer ownership
 
 Terraform installs a basic Argo CD chart and creates the `all-apps` root
-Application in the built-in `default` project. The cluster root creates three
+Application in the built-in `default` project. The cluster root creates two
 AppProjects and five child Applications. Argo CD's self-management child uses
-the GitOps-owned `bootstrap` project and stays manually synced until ownership
-handoff. Each child renders its own chart and optional configuration.
+the GitOps-owned `platform-apps` project. Follow the ownership handoff before
+letting that child manage the release. Each child renders its own chart and
+optional configuration.
 
 ## Terraform bootstrap inputs
 
@@ -27,9 +28,10 @@ Repository URLs live in infrastructure
 GitOps URL and selects `clusters/azure/DEV-JKS/dev/uks/sandbox/aks-agic` on
 `dev/sandbox`. Neither active bootstrap unit reads a local GitOps manifest.
 
-The local Argo CD overlay imports the catalog Kustomization, which includes
-`root_project.yaml` and the self-management Application. The root creates
-`bootstrap`, `platform-apps`, and `apps` at wave `-4`, before child Applications.
+The local Argo CD overlay imports the catalog self-management Application. The
+root creates `platform-apps` and `apps` at wave `-5`, before child Applications.
+`platform-apps` allows the Argo CD chart repository, the `argocd` namespace, and
+the resource types rendered by the pinned chart.
 Treat root repository write access as administrative access because the root
 can create projects and privileged Applications.
 
@@ -162,8 +164,27 @@ changes go through GitOps. `ignore_changes` does not relinquish Helm ownership.
 
 ## Sync the children and verify deployment
 
-Verify children in wave order: AGIC, External DNS, cert-manager, then
-chaos-generator. Check AGIC controller readiness and Application Gateway access
+The AKS AGIC sandbox root uses this sync order:
+
+| Resource | Wave |
+| --- | --- |
+| AppProjects | `-5` |
+| cert-manager Application | `-4` |
+| AGIC Application | `-3` |
+| External DNS Application | `-2` |
+| ClusterIssuer | `-1` |
+| chaos-generator Application | `0` |
+| Argo CD Application | `1` |
+
+The catalog supplies the cert-manager and issuer waves; cluster overlays inherit
+them. Project waves remain in the cluster's AppProject definitions.
+
+The issuer uses `SkipDryRunOnMissingResource=true` because its CRD comes from
+the cert-manager child Application. Argo CD validates the root before executing
+waves; this annotation lets a fresh cluster pass validation while the CRD is
+absent. It does not install the CRD or bypass readiness checks.
+
+Verify cert-manager controller and webhook readiness first. Check AGIC controller readiness and Application Gateway access
 before checking External DNS workload identity and zone discovery. Check issuer
 readiness and workload certificates next. Apply Argo CD runtime configuration only
 after the ownership handoff above.

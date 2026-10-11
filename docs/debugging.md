@@ -8,6 +8,54 @@ Repeated commands are listed once. Azure resource names and identity IDs are
 parameters; fill them from your cluster configuration and Terraform outputs.
 These checks inspect live state without applying or deleting resources.
 
+## Comparison errors after catalog changes
+
+When `all-apps` reports `ComparisonError`, inspect its conditions before retrying
+child syncs:
+
+```sh
+kubectl -n argocd get application all-apps \
+  -o jsonpath='{range .status.conditions[*]}{.type}{": "}{.message}{"\n"}{end}'
+```
+
+An error containing `.spec.sources[0].helm.valueObject: field not declared in
+schema` means a rendered child Application uses an invalid Helm field. The field
+is `valuesObject`, with an `s`. Correct the catalog manifest. A successful
+`kubectl kustomize` render does not validate Application fields against the Argo CD
+CRD schema.
+
+Publish the corrected manifest to the root's configured Git branch. Hard refresh
+`all-apps` and sync the root so it updates the child Application definitions.
+Then refresh the children and inspect their sync results. Until the root updates
+them, live children can retain old `valueFiles` references and report missing
+files after those files have been removed from Git. Refreshing a child alone does
+not replace its stale Application specification.
+
+`Unknown` sync status caused by comparison errors does not establish that the
+running workloads are unavailable. Check pod readiness separately. Do not use
+force sync, resource replacement, or pruning as a workaround for an invalid
+Application field.
+
+## Argo CD Application references the removed bootstrap project
+
+The Argo CD self-management Application belongs to `platform-apps`. If refresh
+reports that `bootstrap` does not exist, the live Application still has its old
+project assignment. Check the live assignment and project list:
+
+```sh
+kubectl -n argocd get application argocd -o jsonpath='{.spec.project}{"\n"}'
+kubectl -n argocd get appprojects
+```
+
+The `platform-apps` project must allow `https://argoproj.github.io/argo-helm`,
+destination namespace `argocd` on `https://kubernetes.default.svc`, and the
+pinned chart's resource types. These include StatefulSets, Ingresses, and
+NetworkPolicies in addition to the existing controller permissions. Publish
+the project correction and let `all-apps` update the project before the child
+Application. If a failed earlier sync wave prevents that update, recover the
+project and child definitions from the corrected Git manifests; recreating the
+old `bootstrap` project is not required.
+
 ## Select the context and resource identifiers
 
 ```sh
@@ -69,6 +117,47 @@ not mean Pods or certificates are ready. A `Succeeded` operation can coexist wit
 `Degraded` or `Progressing` health. In this investigation, AGIC was `Synced` and
 `Degraded`; chaos-generator was `Synced` and `Progressing`. Repeated syncs would
 not resolve their runtime failures.
+
+### Recover a cert-manager sync waiting on its startup Job
+
+Inspect the Job and its events:
+
+```sh
+kubectl --context "$CONTEXT" -n cert-manager get job cert-manager-startupapicheck \
+  --request-timeout=15s
+
+kubectl --context "$CONTEXT" -n cert-manager get events \
+  --field-selector involvedObject.name=cert-manager-startupapicheck \
+  --request-timeout=15s
+
+kubectl --context "$CONTEXT" -n cert-manager get serviceaccount \
+  cert-manager-startupapicheck --request-timeout=15s
+```
+
+A `FailedCreate` event reporting that the ServiceAccount is missing explains why
+the Job has no Pod and the sync keeps running. The catalog now gives the check's
+ServiceAccount and RBAC explicit Argo CD `Sync` hooks in child wave `0`, ahead of
+the Job in wave `1`. The dependencies remain after their hooks succeed.
+
+Publish the corrected manifests, terminate the existing cert-manager operation
+in the Argo CD UI, and refresh and sync `all-apps` to update its child definitions.
+Start a full cert-manager sync if needed. Check that the Job completes and the
+Application becomes `Synced` and `Healthy` before proceeding to later waves.
+
+### Recover AGIC after its Helm defaults were replaced
+
+The AGIC sandbox's previous patch replaced the entire `valuesObject` map. It
+removed the catalog's workload identity and RBAC defaults. Logs showing
+`Creating authorizer using Cluster Service Principal` followed by `AADSTS700016`
+are consistent with that configuration error. The cluster's complete
+`valuesObject` now includes the copied catalog defaults, including
+`armAuth.type: workloadIdentity` and `rbac.enabled: true`. It keeps the deployed ServiceAccount name so the existing
+federated subject remains valid.
+
+After the corrected child definition is applied, sync AGIC and verify its Pod
+becomes ready. If authentication still fails, continue with the identity and
+Azure permission checks below; a successful manifest sync alone does not verify
+those external prerequisites.
 
 ## Check an Argo CD port-forward connection reset
 
@@ -374,6 +463,13 @@ checks, use EndpointSlices instead:
 kubectl --context "$CONTEXT" -n argocd get endpointslices.discovery.k8s.io \
   -o wide --request-timeout=15s
 ```
+
+The Argo CD sandbox Application ignores only paths starting with
+`/.well-known/acme-challenge/` on `argocd/argocd-server`. Its
+`RespectIgnoreDifferences=true` sync option preserves those solver paths during
+sync as well as ignoring their diff. Ordinary routes, TLS settings, and other
+Ingresses remain managed. This avoids repeated self-healing that removes a
+solver path while cert-manager is still validating the certificate.
 
 `presented=true` means the solver has been configured; it does not mean the
 challenge URL is reachable. A self-check reporting `wrong status code '502',

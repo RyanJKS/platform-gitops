@@ -1,15 +1,9 @@
 site_name: Platform GitOps Manifests
-site_description: Kubernetes platform capabilities and application deployments managed by Argo CD
+site_description: Kubernetes platform capabilities and application deployments managed
+  by Argo CD
 nav:
-  - Home: index.md
-  - Architecture: architecture.md
-  - Configuration boundaries: configuration-boundaries.md
-  - Bootstrap: bootstrap.md
-  - Local kind: local-kind.md
-  - Adding a cluster: adding-a-cluster.md
-  - Onboarding an application: onboarding-an-application.md
-  - UK South HTTPS: https.md
-  - Promotion: promotion.md
-  - Recovery: recovery.md
+- Bootstrap: bootstrap.md
+- Platform catalog: platform-catalog.md
+- Debugging: debugging.md
 plugins:
-  - techdocs-core
+- techdocs-core
