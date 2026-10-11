@@ -31,7 +31,7 @@
       oidc.config: |
         name: Microsoft Entra ID
         issuer: https://login.microsoftonline.com/bac158f2-9dfe-4f66-b3e8-7fed8227d08f/v2.0
-        clientID: ef4635d5-6fe4-474e-b29a-d3fb4ba56346
+        clientID: 400c5055-0819-48fc-867b-72e6c291c1f4
         azure:
           useWorkloadIdentity: true
         requestedScopes:
@@ -77,7 +77,7 @@
     create: true
     name: argocd-server
     annotations:
-      azure.workload.identity/client-id: "ef4635d5-6fe4-474e-b29a-d3fb4ba56346"
+      azure.workload.identity/client-id: "400c5055-0819-48fc-867b-72e6c291c1f4"
       azure.workload.identity/tenant-id: "bac158f2-9dfe-4f66-b3e8-7fed8227d08f"
 
 - op: add

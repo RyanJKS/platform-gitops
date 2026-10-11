@@ -7,7 +7,7 @@
       enabled: true
     armAuth:
       type: workloadIdentity
-      identityClientID: b32b2896-0703-428d-b8bb-c36e1526ac9c # TODO: Update when needed
+      identityClientID: 8f74341f-8989-43f8-8f70-fbe04704f5f4 # TODO: Update when needed
     appgw:
       shared: false
       usePrivateIP: false
