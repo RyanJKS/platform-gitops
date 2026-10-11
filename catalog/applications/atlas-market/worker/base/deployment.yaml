@@ -21,7 +21,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: worker
-          image: ghcr.io/ryanjks/atlas-market-worker:REPLACE_IMAGE_TAG
+          image: ghcr.io/ryanjks/atlas-market-worker:REPLACE_PLACEHOLDER
           resources:
             requests:
               cpu: 100m
