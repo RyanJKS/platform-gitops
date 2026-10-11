@@ -4,7 +4,7 @@ metadata:
   name: platform-apps
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "-4"
+    argocd.argoproj.io/sync-wave: "-5"
 spec:
   description: Platform controllers managed by the cluster bootstrap root.
   sourceRepos:

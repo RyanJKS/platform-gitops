@@ -4,7 +4,7 @@ metadata:
   name: apps
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "-4"
+    argocd.argoproj.io/sync-wave: "-5"
 spec:
   description: Workload applications, excluding platform and system namespaces.
   sourceRepos:
