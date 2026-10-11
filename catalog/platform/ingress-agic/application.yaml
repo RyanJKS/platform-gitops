@@ -13,11 +13,6 @@ spec:
       targetRevision: 1.9.1
       helm:
         releaseName: ingress-agic
-        valueFiles:
-          - $values/catalog/platform/ingress-agic/values.yaml
-    - repoURL: https://github.com/RyanJKS/platform-gitops.git
-      targetRevision: main
-      ref: values
   destination:
     server: https://kubernetes.default.svc
     namespace: ingress-agic

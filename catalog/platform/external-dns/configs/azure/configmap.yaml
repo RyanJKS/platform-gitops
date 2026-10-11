@@ -6,5 +6,8 @@ data:
   azure.json: |
     {
       "cloud": "AzurePublicCloud",
+      "tenantId": "REPLACE_PLACEHOLDER",
+      "subscriptionId": "REPLACE_PLACEHOLDER",
+      "resourceGroup": "REPLACE_PLACEHOLDER",
       "useWorkloadIdentityExtension": true
     }

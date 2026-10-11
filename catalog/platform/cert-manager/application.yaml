@@ -13,11 +13,38 @@ spec:
       targetRevision: v1.20.4
       helm:
         releaseName: cert-manager
-        valueFiles:
-          - $values/catalog/platform/cert-manager/values.yaml
-    - repoURL: https://github.com/RyanJKS/platform-gitops.git
-      targetRevision: main
-      ref: values
+        valuesObject:
+          crds:
+            enabled: true
+          # Run the chart's API admission check during Sync, before the issuer wave.
+          # Its default Helm post-install hook would become PostSync and run too late.
+          startupapicheck:
+            enabled: true
+            timeout: 5m
+            jobAnnotations:
+              helm.sh/hook: null
+              helm.sh/hook-weight: null
+              helm.sh/hook-delete-policy: null
+              argocd.argoproj.io/hook: Sync
+              argocd.argoproj.io/sync-wave: "1"
+              argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+            rbac:
+              annotations:
+                helm.sh/hook: null
+                helm.sh/hook-weight: null
+                helm.sh/hook-delete-policy: null
+            serviceAccount:
+              annotations:
+                helm.sh/hook: null
+                helm.sh/hook-weight: null
+                helm.sh/hook-delete-policy: null
+          global:
+            leaderElection:
+              namespace: cert-manager
+          webhook:
+            tolerations:
+              - key: CriticalAddonsOnly
+                operator: Exists
   destination:
     server: https://kubernetes.default.svc
     namespace: cert-manager
@@ -32,5 +59,6 @@ spec:
         factor: 2
         maxDuration: 3m
     syncOptions:
+      - ApplyOutOfSyncOnly=true
       - CreateNamespace=true
       - ServerSideApply=true

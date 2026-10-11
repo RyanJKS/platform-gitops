@@ -14,11 +14,17 @@ spec:
       helm:
         releaseName: external-dns
         skipTests: true
-        valueFiles:
-          - $values/catalog/platform/external-dns/values.yaml
-    - repoURL: https://github.com/RyanJKS/platform-gitops.git
-      targetRevision: main
-      ref: values
+        valuesObject:
+          provider:
+            name: REPLACE_PLACEHOLDER # Select provider values from configs/<cloud>/values.yaml
+          sources:
+            - ingress
+          policy: upsert-only
+          registry: txt
+          txtPrefix: external-dns-
+          serviceAccount:
+            create: true
+            name: external-dns
   destination:
     server: https://kubernetes.default.svc
     namespace: external-dns
