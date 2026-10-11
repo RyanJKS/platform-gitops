@@ -1,0 +1,142 @@
+# Argo CD Entra SSO — final desired SSO settings in resource form.
+# Reference only: copy the mapped fields into your Application's valuesObject.
+# Do not apply this whole file: the Deployment below is an excerpt, and the
+# existing chart continues to manage all four resources.
+#
+# Replace:
+#   <TENANT_ID>                         Entra tenant GUID
+#   <ARGOCD_APP_CLIENT_ID>              SSO app registration client GUID
+#   <PLATFORM_ADMIN_GROUP_OBJECT_ID>    Entra platform administrator group GUID
+#   <TEAM_A_GROUP_OBJECT_ID>            Entra team-a group GUID (example)
+#   argocd.example.com                 Your externally reachable HTTPS FQDN
+#
+# Azure prerequisites:
+#   AKS OIDC issuer and workload identity enabled.
+#   App registration Web redirect URI:
+#     https://argocd.example.com/auth/callback
+#   Federated credential ON THE APP REGISTRATION:
+#     issuer: AKS OIDC issuer URL, not the Entra issuer below
+#     subject: system:serviceaccount:argocd:argocd-server
+#     audience: api://AzureADTokenExchange
+#   Enterprise application: assignment required, allowed users/groups assigned.
+#   App registration: group Object IDs emitted in ID token, permission/consent
+#     configured per the Argo CD Entra setup guide.
+#   No separate UAMI is required for this SSO design.
+#
+# Sources:
+# https://argo-cd.readthedocs.io/en/stable/operator-manual/user-management/microsoft/
+# https://github.com/argoproj/argo-helm/blob/main/charts/argo-cd/README.md
+# https://argo-cd.readthedocs.io/en/stable/operator-manual/rbac/
+
+# 1. ServiceAccount
+# Helm mapping:
+#   metadata.annotations -> valuesObject.server.serviceAccount.annotations
+#   metadata.name        -> valuesObject.server.serviceAccount.name
+# Keep server.serviceAccount.create: true.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argocd-server
+  namespace: argocd
+  annotations:
+    azure.workload.identity/client-id: "<ARGOCD_APP_CLIENT_ID>"
+    azure.workload.identity/tenant-id: "<TENANT_ID>"
+
+---
+# 2. Deployment EXCERPT — only the fields relevant to workload identity.
+# This is NOT a complete standalone Deployment manifest.
+# The chart supplies selector, containers, image, environment, volumes, etc.
+# Helm mapping:
+#   spec.template.metadata.labels -> valuesObject.server.podLabels
+# The chart sets serviceAccountName from server.serviceAccount.name.
+# Keep the workload identity label on the pod template, not just on metadata.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-server
+  namespace: argocd
+spec:
+  template:
+    metadata:
+      labels:
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: argocd-server
+
+---
+# 3. Main configuration ConfigMap
+# Helm mapping:
+#   each entry under data -> the same key under valuesObject.configs.cm
+# Keep configs.cm.create: true.
+# Includes the existing reconciliation settings and Application health script.
+# The chart may add its own default data entries and metadata.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+  namespace: argocd
+data:
+  application.instanceLabelKey: argocd.argoproj.io/instance
+  timeout.reconciliation: "180s"
+
+  url: https://argocd.example.com
+  oidc.config: |
+    name: Microsoft Entra ID
+    issuer: https://login.microsoftonline.com/<TENANT_ID>/v2.0
+    clientID: <ARGOCD_APP_CLIENT_ID>
+    azure:
+      useWorkloadIdentity: true
+    requestedScopes:
+      - openid
+      - profile
+      - email
+    requestedIDTokenClaims:
+      groups:
+        essential: true
+
+  resource.customizations.health.argoproj.io_Application: |
+    local health = {
+      status = "Progressing",
+      message = "Waiting for child Application to sync and become healthy"
+    }
+    if obj.status ~= nil then
+      if obj.status.health ~= nil then
+        health.message = obj.status.health.message or health.message
+        if obj.status.health.status == "Degraded" then
+          health.status = "Degraded"
+          health.message = obj.status.health.message or "Child Application is degraded"
+          return health
+        end
+        if obj.status.sync ~= nil and obj.status.sync.status == "Synced" then
+          health.status = obj.status.health.status or "Progressing"
+          health.message = obj.status.health.message or ""
+        end
+      end
+    end
+    return health
+
+---
+# 4. RBAC ConfigMap
+# Helm mapping:
+#   each entry under data -> the same key under valuesObject.configs.rbac
+# Keep configs.rbac.create: true.
+# Blank default grants no default role permissions.
+# team-a is an AppProject name; create and constrain that AppProject separately.
+# Application object patterns assume Applications are in the argocd namespace.
+# The team-a example grants view and sync access within that project only.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-rbac-cm
+  namespace: argocd
+data:
+  policy.default: ""
+  policy.matchMode: glob
+  scopes: "[groups]"
+  policy.csv: |
+    g, <PLATFORM_ADMIN_GROUP_OBJECT_ID>, role:admin
+
+    p, role:team-a, projects, get, team-a, allow
+    p, role:team-a, applications, get, team-a/*, allow
+    p, role:team-a, applications, sync, team-a/*, allow
+    g, <TEAM_A_GROUP_OBJECT_ID>, role:team-a

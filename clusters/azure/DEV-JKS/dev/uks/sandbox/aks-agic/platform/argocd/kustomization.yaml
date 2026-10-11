@@ -10,3 +10,10 @@ patches:
       version: v1alpha1
       kind: Application
       name: argocd
+
+  - path: sso-patches.yaml
+    target:
+      group: argoproj.io
+      version: v1alpha1
+      kind: Application
+      name: argocd

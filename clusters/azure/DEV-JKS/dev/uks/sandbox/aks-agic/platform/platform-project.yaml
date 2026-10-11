@@ -9,12 +9,15 @@ spec:
   description: Platform controllers managed by the cluster bootstrap root.
   sourceRepos:
     - https://github.com/RyanJKS/platform-gitops.git
+    - https://argoproj.github.io/argo-helm
     - https://charts.jetstack.io
     - https://kubernetes-sigs.github.io/external-dns/
     - mcr.microsoft.com/azure-application-gateway/charts
     - https://kyverno.github.io/kyverno/
     - https://falcosecurity.github.io/charts
   destinations:
+    - server: https://kubernetes.default.svc
+      namespace: argocd
     - server: https://kubernetes.default.svc
       namespace: cert-manager
     - server: https://kubernetes.default.svc
@@ -63,6 +66,12 @@ spec:
       kind: Role
     - group: rbac.authorization.k8s.io
       kind: RoleBinding
+    - group: apps
+      kind: StatefulSet
+    - group: networking.k8s.io
+      kind: Ingress
+    - group: networking.k8s.io
+      kind: NetworkPolicy
   roles:
     - name: operator
       description: Inspect and sync platform Applications without changing their definitions.

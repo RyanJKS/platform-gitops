@@ -15,7 +15,7 @@
         readOnly: true
     serviceAccount:
       annotations:
-        azure.workload.identity/client-id: 06180a78-452c-4e0a-ad43-bf579944ab3a # TODO: Update when needed
+        azure.workload.identity/client-id: 1f15d4be-1aec-4f4b-9090-b1e49817df4a # TODO: Update when needed
         azure.workload.identity/tenant-id: bac158f2-9dfe-4f66-b3e8-7fed8227d08f
     domainFilters:
       - jkslabs.site

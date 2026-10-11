@@ -1,0 +1,86 @@
+- op: add
+  path: /spec/sources/0/helm/valuesObject/configs
+  value:
+    cm:
+      application.instanceLabelKey: argocd.argoproj.io/instance
+      timeout.reconciliation: 180s
+
+      # Preserve shared Application health checks.
+      resource.customizations.health.argoproj.io_Application: |
+        local health = {
+          status = "Progressing",
+          message = "Waiting for child Application to sync and become healthy"
+        }
+        if obj.status ~= nil then
+          if obj.status.health ~= nil then
+            health.message = obj.status.health.message or health.message
+            if obj.status.health.status == "Degraded" then
+              health.status = "Degraded"
+              health.message = obj.status.health.message or "Child Application is degraded"
+              return health
+            end
+            if obj.status.sync ~= nil and obj.status.sync.status == "Synced" then
+              health.status = obj.status.health.status or "Progressing"
+              health.message = obj.status.health.message or ""
+            end
+          end
+        end
+        return health
+
+      url: https://argocd.jkslabs.site
+      oidc.config: |
+        name: Microsoft Entra ID
+        issuer: https://login.microsoftonline.com/bac158f2-9dfe-4f66-b3e8-7fed8227d08f/v2.0
+        clientID: ef4635d5-6fe4-474e-b29a-d3fb4ba56346
+        azure:
+          useWorkloadIdentity: true
+        requestedScopes:
+          - openid
+          - profile
+          - email
+
+        # below is only required for groups
+        # requestedIDTokenClaims:
+        #   groups:
+        #     essential: true
+        #
+    params:
+      server.insecure: true
+
+    rbac:
+      policy.default: ""
+      policy.matchMode: glob
+      scopes: "[email]"
+      policy.csv: |
+        g, rjhelan@gmail.com, role:admin
+
+        p, role:apps-operator, projects, get, apps, allow
+        p, role:apps-operator, applications, get, apps/*, allow
+        p, role:apps-operator, applications, sync, apps/*, allow
+
+    # Add the below for groups
+    # rbac:
+    #   policy.default: ""
+    #   policy.matchMode: glob
+    #   scopes: "[groups]"
+    #   policy.csv: |
+    #     g, <PLATFORM_ADMIN_GROUP_OBJECT_ID>, role:admin
+    #
+    #     p, role:apps-operator, projects, get, apps, allow
+    #     p, role:apps-operator, applications, get, apps/*, allow
+    #     p, role:apps-operator, applications, sync, apps/*, allow
+    #     g, <APPS_GROUP_OBJECT_ID>, role:apps-operator
+
+- op: add
+  path: /spec/sources/0/helm/valuesObject/server/serviceAccount
+  value:
+    create: true
+    name: argocd-server
+    annotations:
+      azure.workload.identity/client-id: "ef4635d5-6fe4-474e-b29a-d3fb4ba56346"
+      azure.workload.identity/tenant-id: "bac158f2-9dfe-4f66-b3e8-7fed8227d08f"
+
+- op: add
+  path: /spec/sources/0/helm/valuesObject/server/podLabels
+  value:
+    azure.workload.identity/use: "true"
