@@ -58,12 +58,19 @@ installs the cert-manager CRDs. Cluster overlays inherit these annotations and
 patch issuer deployment settings. The chart's API readiness hook remains in wave
 `1` inside the cert-manager child; its wave is separate from the root's waves.
 
-The API check's ServiceAccount, Role, and RoleBinding are explicit Argo CD `Sync`
-hooks in child wave `0`. Their deletion policy is `BeforeHookCreation`, so they
-remain available for the check Job in wave `1`. The Job uses
+The controller and API check Job both use the chart-created `cert-manager`
+ServiceAccount. The check sets `serviceAccount.create: false` and
+`serviceAccount.name: cert-manager` to reuse it without creating a duplicate.
+The check's Role and RoleBinding are explicit Argo CD `Sync` hooks in child wave
+`0`. Their deletion policy is `BeforeHookCreation`, so they remain available for
+the check Job in wave `1`. The Job uses
 `BeforeHookCreation,HookSucceeded` and is removed after success. Explicit Argo CD
 annotations override the chart's Helm hook defaults without depending on null
 values surviving serialization into a running sync operation.
+
+The current HTTP-01 solver routes through AGIC and needs no Azure managed identity
+on cert-manager. An Azure DNS DNS-01 solver would require cert-manager's own Azure
+authentication configuration and DNS permissions.
 
 Waves order child Applications when their parent syncs. The shared Argo CD Helm values provide the Application health
 check that makes the parent wait for each child to report `Synced` and `Healthy`.

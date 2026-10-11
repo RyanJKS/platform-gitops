@@ -25,3 +25,8 @@ sequenceDiagram
     A-->>B: Establish signed-in session
 
 ```
+
+Useful links:
+
+- https://argo-cd.readthedocs.io/en/stable/operator-manual/user-management/microsoft/#entra-id-saml-enterprise-app-auth-using-dex
+- https://github.com/argoproj/argo-cd/blob/master/docs/operator-manual/argocd-rbac-cm.yaml

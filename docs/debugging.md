@@ -131,13 +131,14 @@ kubectl --context "$CONTEXT" -n cert-manager get events \
   --request-timeout=15s
 
 kubectl --context "$CONTEXT" -n cert-manager get serviceaccount \
-  cert-manager-startupapicheck --request-timeout=15s
+  cert-manager --request-timeout=15s
 ```
 
 A `FailedCreate` event reporting that the ServiceAccount is missing explains why
-the Job has no Pod and the sync keeps running. The catalog now gives the check's
-ServiceAccount and RBAC explicit Argo CD `Sync` hooks in child wave `0`, ahead of
-the Job in wave `1`. The dependencies remain after their hooks succeed.
+the Job has no Pod and the sync keeps running. The catalog now makes the check
+reuse the controller's chart-created `cert-manager` ServiceAccount. The check's
+RBAC uses explicit Argo CD `Sync` hooks in child wave `0`, ahead of the Job in
+wave `1`. The RBAC remains after its hooks succeed.
 
 Publish the corrected manifests, terminate the existing cert-manager operation
 in the Argo CD UI, and refresh and sync `all-apps` to update its child definitions.
