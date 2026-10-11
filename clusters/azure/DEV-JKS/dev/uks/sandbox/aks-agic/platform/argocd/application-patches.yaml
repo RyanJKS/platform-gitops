@@ -11,7 +11,7 @@
     global:
       domain: argocd.jkslabs.site
     server:
-      replicas: 2
+      replicas: 3
       ingress:
         annotations:
           cert-manager.io/cluster-issuer: letsencrypt-prod
@@ -20,7 +20,7 @@
               - argocd.jkslabs.site
             secretName: argocd-ingress-tls
     controller:
-      replicas: 3
+      replicas: 1
       resources:
         requests:
           cpu: 250m
