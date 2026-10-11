@@ -28,6 +28,8 @@
         return health
 
       url: https://argocd.jkslabs.site
+      additionalUrls: |
+        - http://localhost:8080
       oidc.config: |
         name: Microsoft Entra ID
         issuer: https://login.microsoftonline.com/bac158f2-9dfe-4f66-b3e8-7fed8227d08f/v2.0
