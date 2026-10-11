@@ -16,11 +16,11 @@
         annotations:
           cert-manager.io/cluster-issuer: letsencrypt-prod
         extraTls:
-        - hosts:
-          - argocd.jkslabs.site
-          secretName: argocd-ingress-tls
+          - hosts:
+              - argocd.jkslabs.site
+            secretName: argocd-ingress-tls
     controller:
-      replicas: 1
+      replicas: 3
       resources:
         requests:
           cpu: 250m
