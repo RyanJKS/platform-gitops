@@ -1,6 +1,0 @@
-- op: replace
-  path: /spec/source/targetRevision
-  value: dev/sandbox
-- op: replace
-  path: /spec/source/path
-  value: clusters/azure/DEV-JKS/dev/uks/sandbox/aks-agic/argocd/applications/chaos-generator

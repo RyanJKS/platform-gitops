@@ -3,6 +3,8 @@ kind: Application
 metadata:
   name: ingress-agic
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
 spec:
   project: platform-apps
   sources:
@@ -20,6 +22,9 @@ spec:
     server: https://kubernetes.default.svc
     namespace: ingress-agic
   syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

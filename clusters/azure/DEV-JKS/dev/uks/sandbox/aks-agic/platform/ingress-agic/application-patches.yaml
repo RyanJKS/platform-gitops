@@ -1,0 +1,9 @@
+- op: add
+  path: /spec/sources/0/helm/valuesObject
+  value:
+    appgw:
+      subscriptionId: 91c6f5e9-f6ab-400c-b5e7-265fd48053d3
+      resourceGroup: SANDBOX-SHARED-UKS-DEV-RG
+      name: sandboxuksdevagw
+    armAuth:
+      identityClientID: 31ddc995-e5c6-403a-979b-72db6d2005cb # TODO: Update when needed

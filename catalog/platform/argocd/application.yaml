@@ -1,31 +1,37 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: external-dns
+  name: argocd
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "-2"
+    argocd.argoproj.io/sync-wave: "1"
 spec:
-  project: platform-apps
+  project: bootstrap
   sources:
-    - repoURL: https://kubernetes-sigs.github.io/external-dns/
-      chart: external-dns
-      targetRevision: 1.19.0
+    - repoURL: https://argoproj.github.io/argo-helm
+      chart: argo-cd
+      targetRevision: "10.9.0"
       helm:
-        releaseName: external-dns
-        skipTests: true
+        releaseName: argocd
         valueFiles:
-          - $values/catalog/platform/external-dns/values.yaml
+          - $values/catalog/platform/argocd/values.yaml
     - repoURL: https://github.com/RyanJKS/platform-gitops.git
       targetRevision: main
       ref: values
   destination:
     server: https://kubernetes.default.svc
-    namespace: external-dns
+    namespace: argocd
   syncPolicy:
     automated:
+      enabled: true
       prune: false
       selfHeal: true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

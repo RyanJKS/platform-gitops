@@ -1,25 +1,29 @@
-# UK South AGIC sandbox
+# AKS UK South AGIC sandbox
 
-This cluster uses Kustomize to bootstrap Argo CD and the `all-apps` root
-Application in the `bootstrap` project. The root creates `platform-apps` for
-controllers and `apps` for workloads. It selects `cert-manager`, `external-dns`,
-and `ingress-agic` under `platform-apps`, plus `chaos-generator` under `apps`.
+The cluster root selects `applications-project.yaml`, `platform-project.yaml`,
+`platform/`, and `workloads/`. It renders three AppProjects and five Applications in
+namespace `argocd`. Parent Kustomizations select local app folders. Each app's
+Kustomization imports its catalog Application and applies local Application
+patches. Cluster patches select provider values, child config paths, and Git
+revisions; catalog manifests contain no cluster paths. The root does not render controller or workload resources.
 
-`bootstrap/kustomization.yaml` imports the shared installation base and applies
-cluster-specific Argo CD patches. `bootstrap/seed.yaml` seeds the root after CRD
-and controller readiness. Installation and seeding use separate commands; all
-bootstrap files live directly in `bootstrap/`. `argocd/` defines both shared projects and selects
-catalog-owned Applications, then applies cluster patches, Helm values, and
-workload overlays. Its root Kustomization selects both project files, `platform/`,
-and `applications/`.
+Cert-manager, External DNS, and chaos-generator child Git sources deploy separate
+`configs/` overlays. Each resource Kustomization and its patches live together;
+Application patches stay beside the app-level Kustomization.
+Helm children read their selected catalog and
+inline cluster `helm.valuesObject` settings in `application-patches.yaml`. Argo CD uses the GitOps-owned `bootstrap` project; the Terraform root uses
+`default`; runtime values and the handoff gate live in
+[Argo CD configuration](platform/argocd/README.md).
 
-Bootstrap also selects an AGIC Ingress for `argocd.jkslabs.site`, with TLS at
-Application Gateway and an HTTP Argo CD backend. Public access requires the three
-platform controllers; local bootstrap access uses `http://localhost:8080`.
-The certificate uses Let's Encrypt production after staging validation was verified.
+Projects use wave `-4`; AGIC uses `-3`, External DNS `-2`, cert-manager `-1`,
+chaos-generator `0`, and Argo CD `1`. Runtime Application health customization
+makes the root wait for synced, healthy children. Minimal bootstrap lacks that
+customization; verify initial children manually. Existing children reconcile
+independently.
 
-All rendered Applications read Git configuration from `dev/sandbox`. Child
-Applications start with manual sync while Azure and DNS placeholders are configured.
+Selected Git sources use `dev/sandbox`. Publish reviewed configuration before
+reconciliation. Verify Azure identities, gateway access, DNS, and certificates
+separately from Application health.
 
-See [the AKS AGIC guide](../../../../../../../docs/aks-agic.md) for prerequisites,
-required values, bootstrap commands, sync order, access controls, and validation.
+See [bootstrap](../../../../../../../docs/bootstrap.md) for installation,
+ownership transfer, and recovery.

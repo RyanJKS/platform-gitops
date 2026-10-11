@@ -1,3 +1,0 @@
-- op: add
-  path: /spec/sources/0/helm/valueFiles/-
-  value: $values/clusters/azure/DEV-JKS/dev/uks/sandbox/aks-agic/argocd/platform/ingress-agic/values.yaml

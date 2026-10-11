@@ -1,0 +1,19 @@
+- op: add
+  path: /spec/sources/0/helm/valueFiles/-
+  value: $values/catalog/platform/external-dns/azure-values.yaml
+- op: add
+  path: /spec/sources/0/helm/valuesObject
+  value:
+    serviceAccount:
+      annotations:
+        azure.workload.identity/client-id: 15678196-753a-45b0-9e7d-2cf8798653ea # TODO: Update when needed
+        azure.workload.identity/tenant-id: bac158f2-9dfe-4f66-b3e8-7fed8227d08f
+    domainFilters:
+      - jkslabs.site
+    txtOwnerId: dev-uks-sandbox-aks-agic
+    extraArgs:
+      - --azure-config-file=/etc/kubernetes/azure.json
+      - --ingress-class=azure-application-gateway
+- op: add
+  path: /spec/sources/1/path
+  value: clusters/azure/DEV-JKS/dev/uks/sandbox/aks-agic/platform/external-dns/configs

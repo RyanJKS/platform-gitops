@@ -1,6 +1,0 @@
-appgw:
-  subscriptionId: 91c6f5e9-f6ab-400c-b5e7-265fd48053d3
-  resourceGroup: SANDBOX-SHARED-UKS-DEV-RG
-  name: sandboxuksdevagw
-armAuth:
-  identityClientID: 85511dca-d466-455a-97ec-dcf5c3b62f6e # TODO: Update when needed

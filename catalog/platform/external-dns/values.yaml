@@ -1,6 +1,6 @@
 provider:
-  # Add one provider values file in the cluster's Application patch before deploying.
-  name: REPLACE_DNS_PROVIDER
+  # Select provider values through the cluster's Application patch before deploying.
+  name: REPLACE_PLACEHOLDER
 sources:
   - ingress
 policy: upsert-only

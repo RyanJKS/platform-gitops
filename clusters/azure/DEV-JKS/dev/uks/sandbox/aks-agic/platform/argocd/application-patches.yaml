@@ -1,0 +1,37 @@
+- op: add
+  path: /spec/sources/0/helm/valueFiles/-
+  value: $values/catalog/platform/argocd/azure-values.yaml
+# Enable only after Terraform has relinquished the Helm release.
+- op: replace
+  path: /spec/syncPolicy/automated/enabled
+  value: false
+- op: add
+  path: /spec/sources/0/helm/valuesObject
+  value:
+    global:
+      domain: argocd.jkslabs.site
+    server:
+      replicas: 2
+      ingress:
+        annotations:
+          cert-manager.io/cluster-issuer: letsencrypt-prod
+        extraTls:
+        - hosts:
+          - argocd.jkslabs.site
+          secretName: argocd-ingress-tls
+    controller:
+      replicas: 1
+      resources:
+        requests:
+          cpu: 250m
+          memory: 1Gi
+        limits:
+          memory: 2Gi
+    repoServer:
+      replicas: 2
+    redis-ha:
+      enabled: true
+    redis:
+      enabled: false
+    dex:
+      enabled: false
