@@ -1,24 +1,60 @@
 - op: add
-  path: /spec/sources/0/helm/valueFiles/-
-  value: $values/catalog/platform/argocd/azure-values.yaml
-# Enable only after Terraform has relinquished the Helm release.
-- op: replace
-  path: /spec/syncPolicy/automated/enabled
-  value: false
-- op: add
   path: /spec/sources/0/helm/valuesObject
   value:
     global:
-      domain: argocd.jkslabs.site
+      image:
+        tag: v3.5.4
+      domain: argocd.jkslabs.site # chart hostname
+    crds:
+      install: true
+      keep: true
+    configs:
+      cm:
+        application.instanceLabelKey: argocd.argoproj.io/instance
+        timeout.reconciliation: 180s
+        resource.customizations.health.argoproj.io_Application: |
+          local health = {
+            status = "Progressing",
+            message = "Waiting for child Application to sync and become healthy"
+          }
+          if obj.status ~= nil then
+            if obj.status.health ~= nil then
+              health.message = obj.status.health.message or health.message
+              if obj.status.health.status == "Degraded" then
+                health.status = "Degraded"
+                health.message = obj.status.health.message or "Child Application is degraded"
+                return health
+              end
+              if obj.status.sync ~= nil and obj.status.sync.status == "Synced" then
+                health.status = obj.status.health.status or "Progressing"
+                health.message = obj.status.health.message or ""
+              end
+            end
+          end
+          return health
+      params:
+        server.insecure: true
+      rbac:
+        policy.default: ""
+        policy.csv: ""
     server:
-      replicas: 3
+      service:
+        type: ClusterIP
       ingress:
+        enabled: true
+        controller: generic
+        ingressClassName: azure-application-gateway
         annotations:
+          acme.cert-manager.io/http01-edit-in-place: "true"
+          appgw.ingress.kubernetes.io/backend-protocol: http
+          appgw.ingress.kubernetes.io/ssl-redirect: "true"
           cert-manager.io/cluster-issuer: letsencrypt-prod
+        tls: false
         extraTls:
           - hosts:
-              - argocd.jkslabs.site
+              - argocd.jkslabs.site # hostname covered by this secret
             secretName: argocd-ingress-tls
+      replicas: 3
     controller:
       replicas: 1
       resources:
