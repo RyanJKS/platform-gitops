@@ -5,8 +5,6 @@
       name: azure
     podLabels:
       azure.workload.identity/use: "true"
-    extraArgs:
-      - --azure-config-file=/etc/kubernetes/azure.json
     extraVolumes:
       - name: azure-config
         configMap:
