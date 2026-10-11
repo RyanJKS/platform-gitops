@@ -16,28 +16,25 @@ spec:
         valuesObject:
           crds:
             enabled: true
-          # Run the chart's API admission check during Sync, before the issuer wave.
-          # Its default Helm post-install hook would become PostSync and run too late.
+          # Argo CD hooks override the chart's Helm post-install hooks.
+          # Keep the check's dependencies in wave 0 until its wave 1 Job completes.
           startupapicheck:
             enabled: true
             timeout: 5m
             jobAnnotations:
-              helm.sh/hook: null
-              helm.sh/hook-weight: null
-              helm.sh/hook-delete-policy: null
               argocd.argoproj.io/hook: Sync
               argocd.argoproj.io/sync-wave: "1"
               argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
             rbac:
               annotations:
-                helm.sh/hook: null
-                helm.sh/hook-weight: null
-                helm.sh/hook-delete-policy: null
+                argocd.argoproj.io/hook: Sync
+                argocd.argoproj.io/sync-wave: "0"
+                argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
             serviceAccount:
               annotations:
-                helm.sh/hook: null
-                helm.sh/hook-weight: null
-                helm.sh/hook-delete-policy: null
+                argocd.argoproj.io/hook: Sync
+                argocd.argoproj.io/sync-wave: "0"
+                argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
           global:
             leaderElection:
               namespace: cert-manager

@@ -1,4 +1,16 @@
 - op: add
+  path: /spec/ignoreDifferences
+  value:
+    - group: networking.k8s.io
+      kind: Ingress
+      name: argocd-server
+      namespace: argocd
+      jqPathExpressions:
+        - '.spec.rules[]?.http.paths[]? | select((.path // "") | startswith("/.well-known/acme-challenge/"))'
+- op: add
+  path: /spec/syncPolicy/syncOptions/-
+  value: RespectIgnoreDifferences=true
+- op: add
   path: /spec/sources/0/helm/valuesObject
   value:
     global:
