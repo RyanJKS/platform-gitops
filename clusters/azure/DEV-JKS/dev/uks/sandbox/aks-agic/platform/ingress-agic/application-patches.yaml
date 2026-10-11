@@ -2,7 +2,7 @@
   path: /spec/sources/0/helm/valuesObject
   value:
     # Keep the deployed chart-generated names and the federated ServiceAccount subject.
-    fullnameOverride: ""
+    fullnameOverride: ingress-agic
     rbac:
       enabled: true
     armAuth:
