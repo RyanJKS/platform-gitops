@@ -3,16 +3,23 @@ kind: Application
 metadata:
   name: chaos-generator
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
 spec:
   project: apps
   source:
     repoURL: https://github.com/RyanJKS/platform-gitops.git
     targetRevision: main
-    path: catalog/applications/chaos-generator
+    path: catalog/applications/chaos-generator/configs
   destination:
     server: https://kubernetes.default.svc
     namespace: chaos-generator
   syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
