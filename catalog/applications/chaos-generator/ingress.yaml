@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: chaos-generator
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: webapprouting.kubernetes.azure.com # based on provisioned web_app_routing in azurerm terraform
+  rules:
+    - host: chaos.jkslabs.site
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: chaos-generator-svc
+                port:
+                  number: 8501
+  tls:
+    - hosts:
+        - chaos.jkslabs.site
+      secretName: chaos-generator-tls # cert-manager: requests a separate certificate and stores it in chaos-generator-tls.
