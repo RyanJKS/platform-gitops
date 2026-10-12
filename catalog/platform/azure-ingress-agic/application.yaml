@@ -1,0 +1,40 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ingress-agic
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  project: platform-apps
+  sources:
+    - repoURL: mcr.microsoft.com/azure-application-gateway/charts
+      chart: ingress-azure
+      targetRevision: 1.9.1
+      helm:
+        releaseName: ingress-agic
+        valuesObject:
+          fullnameOverride: ingress-agic
+          rbac:
+            enabled: true
+          armAuth:
+            type: workloadIdentity
+          appgw:
+            shared: false
+            usePrivateIP: false
+          kubernetes:
+            ingressClassResource:
+              enabled: true
+              name: azure-application-gateway
+              default: false
+              controllerValue: azure/application-gateway
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ingress-agic
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

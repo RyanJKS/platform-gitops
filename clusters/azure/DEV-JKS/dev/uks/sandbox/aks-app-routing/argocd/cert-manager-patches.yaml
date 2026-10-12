@@ -1,0 +1,8 @@
+- op: add
+  path: /spec/sources/1/path
+  value: clusters/azure/DEV-JKS/dev/uks/sandbox/aks-app-routing/argocd/platform/cert-manager/configs
+- op: add
+  path: /spec/syncPolicy/automated
+  value:
+    prune: false
+    selfHeal: true

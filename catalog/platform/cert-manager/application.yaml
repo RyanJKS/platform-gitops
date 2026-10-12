@@ -1,23 +1,47 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: platform-cert-manager
+  name: cert-manager
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-4"
 spec:
-  project: cert-manager
+  project: platform-apps
   sources:
     - repoURL: https://charts.jetstack.io
       chart: cert-manager
       targetRevision: v1.20.4
       helm:
         releaseName: cert-manager
-        valueFiles:
-          - $values/catalog/platform/cert-manager/values.yaml
-          - $values/catalog/platform/cert-manager/argocd-values.yaml
-    - repoURL: https://github.com/RyanJKS/platform-gitops.git
-      targetRevision: main
-      ref: values
-      path: catalog/platform/cert-manager/issuers
+        valuesObject:
+          crds:
+            enabled: true
+          # Argo CD hooks override the chart's Helm post-install hooks.
+          # Keep the check's dependencies in wave 0 until its wave 1 Job completes.
+          startupapicheck:
+            enabled: true
+            timeout: 5m
+            jobAnnotations:
+              argocd.argoproj.io/hook: Sync
+              argocd.argoproj.io/sync-wave: "1"
+              argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+            rbac:
+              annotations:
+                argocd.argoproj.io/hook: Sync
+                argocd.argoproj.io/sync-wave: "0"
+                argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+            serviceAccount:
+              annotations:
+                argocd.argoproj.io/hook: Sync
+                argocd.argoproj.io/sync-wave: "0"
+                argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+          global:
+            leaderElection:
+              namespace: cert-manager
+          webhook:
+            tolerations:
+              - key: CriticalAddonsOnly
+                operator: Exists
   destination:
     server: https://kubernetes.default.svc
     namespace: cert-manager
@@ -32,5 +56,6 @@ spec:
         factor: 2
         maxDuration: 3m
     syncOptions:
+      - ApplyOutOfSyncOnly=true
       - CreateNamespace=true
       - ServerSideApply=true

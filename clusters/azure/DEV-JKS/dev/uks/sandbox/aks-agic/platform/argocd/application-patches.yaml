@@ -1,0 +1,56 @@
+- op: add
+  path: /spec/ignoreDifferences
+  value:
+    - group: networking.k8s.io
+      kind: Ingress
+      name: argocd-server
+      namespace: argocd
+      jqPathExpressions:
+        - '.spec.rules[]?.http.paths[]? | select((.path // "") | startswith("/.well-known/acme-challenge/"))'
+- op: add
+  path: /spec/syncPolicy/syncOptions/-
+  value: RespectIgnoreDifferences=true
+- op: add
+  path: /spec/sources/0/helm/valuesObject
+  value:
+    global:
+      domain: argocd.jkslabs.site # chart hostname
+      params:
+        server.insecure: true
+      rbac:
+        policy.default: ""
+        policy.csv: ""
+    server:
+      service:
+        type: ClusterIP
+      ingress:
+        enabled: true
+        controller: generic
+        ingressClassName: azure-application-gateway
+        annotations:
+          acme.cert-manager.io/http01-edit-in-place: "true"
+          appgw.ingress.kubernetes.io/backend-protocol: http
+          appgw.ingress.kubernetes.io/ssl-redirect: "true"
+          cert-manager.io/cluster-issuer: letsencrypt-prod
+        tls: false
+        extraTls:
+          - hosts:
+              - argocd.jkslabs.site # hostname covered by this secret
+            secretName: argocd-ingress-tls
+      replicas: 3
+    controller:
+      replicas: 1
+      resources:
+        requests:
+          cpu: 250m
+          memory: 1Gi
+        limits:
+          memory: 2Gi
+    repoServer:
+      replicas: 2
+    redis-ha:
+      enabled: true
+    redis:
+      enabled: false
+    dex:
+      enabled: false

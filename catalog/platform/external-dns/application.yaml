@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: external-dns
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  project: platform-apps
+  sources:
+    - repoURL: https://kubernetes-sigs.github.io/external-dns/
+      chart: external-dns
+      targetRevision: 1.19.0
+      helm:
+        releaseName: external-dns
+        skipTests: true
+        valuesObject:
+          provider:
+            name: REPLACE_PLACEHOLDER # Select provider values from configs/<cloud>/values.yaml
+          sources:
+            - ingress
+          policy: upsert-only
+          registry: txt
+          txtPrefix: external-dns-
+          serviceAccount:
+            create: true
+            name: external-dns
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: external-dns
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

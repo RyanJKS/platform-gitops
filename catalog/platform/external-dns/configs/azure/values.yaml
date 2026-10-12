@@ -1,0 +1,14 @@
+provider:
+  name: azure
+podLabels:
+  azure.workload.identity/use: "true"
+extraArgs:
+  - --azure-config-file=/etc/kubernetes/azure.json
+extraVolumes:
+  - name: azure-config
+    configMap:
+      name: external-dns-azure
+extraVolumeMounts:
+  - name: azure-config
+    mountPath: /etc/kubernetes
+    readOnly: true

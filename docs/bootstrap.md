@@ -1,203 +1,210 @@
-# Bootstrap
+# Bootstrap Argo CD and transfer ownership
 
-## Domain path migration
+Terraform installs a basic Argo CD chart and creates the `all-apps` root
+Application in the built-in `default` project. The cluster root creates two
+AppProjects and five child Applications. Argo CD's self-management child uses
+the GitOps-owned `platform-apps` project. Follow the ownership handoff before
+letting that child manage the release. Each child renders its own chart and
+optional configuration.
 
-Cloud cluster directories now use the domain name directly: `atlas/` replaces
-`spoke-atlas/`. Application names, namespaces, and cluster identities are unchanged.
+## Terraform bootstrap inputs
 
-Publish the renamed directories and updated child Application paths together. Update
-each external root's `spec.source.path` to the matching `atlas/<cluster>/argocd` path
-at a Git revision containing this change, then reconcile that existing root. Azure
-shared roots are owned by Terraform; update their Terraform configuration instead of
-creating replacement roots. Update any external automation that constructs cluster
-paths. Roots still using the old path cannot render after this change.
+The existing sibling infrastructure repository is `platform-infrastructure`.
+Its AKS AGIC units are under
+`infrastructure/azure/live/DEV-JKS/dev/uks/sandbox/platform/aks-agic/`.
 
-This repository contains no Terragrunt configuration. Renaming `spoke.hcl` to
-`domain.hcl`, updating its includes, and checking any path-derived state keys belong
-to the infrastructure repository and must be coordinated separately.
+| Unit | Input | Purpose |
+| --- | --- | --- |
+| `argocd_helm_manifest` | Hardcoded `release` in Terragrunt, chart defaults | Installs `argocd` in namespace `argocd`, chart `argo-cd` version `10.9.0` |
+| `argocd_application_manifest` | Inline manifest in Terragrunt | Creates `all-apps`, targeting the cluster root on `dev/sandbox` |
 
-## Azure shared bootstrap
+The Helm unit does not read GitOps chart metadata or runtime values. The module's
+default empty values list lets the official chart supply installation defaults,
+including CRDs. Namespace creation is enabled, installation waits for readiness,
+and its timeout is 600 seconds. There is no bootstrap ingress or HA override.
 
-For the `uks` and `eus2` variants of `atlas/aks-shared`, Terraform installs
-Argo CD through the Azure extension and creates the root Application `all-apps`
-in namespace `argocd`. Do not apply the inactive legacy `bootstrap/root.yaml`,
-install another Argo CD instance, or create another root owner.
+Repository URLs live in infrastructure
+`infrastructure/azure/_envcommon/repo-urls.hcl`. The root uses its configured
+GitOps URL and selects `clusters/azure/DEV-JKS/dev/uks/sandbox/aks-agic` on
+`dev/sandbox`. Neither active bootstrap unit reads a local GitOps manifest.
 
-Configure Terraform's root with this exact source and enable automated sync:
+The local Argo CD overlay imports the catalog self-management Application. The
+root creates `platform-apps` and `apps` at wave `-5`, before child Applications.
+`platform-apps` allows the Argo CD chart repository, the `argocd` namespace, and
+the resource types rendered by the pinned chart.
+Treat root repository write access as administrative access because the root
+can create projects and privileged Applications.
 
-```yaml
-spec:
-  source:
-    repoURL: https://github.com/RyanJKS/platform-gitops.git
-    targetRevision: main
-    path: clusters/azure/DEV-JKS/dev/uks/atlas/aks-shared/argocd
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: argocd
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-```
+## Repository access
 
-The source above selects the new `uks` variant. The existing `eus2` variant remains
-available at `clusters/azure/DEV-JKS/dev/eus2/atlas/aks-shared/argocd`.
-Choose exactly one source path for each cluster's Terraform-owned `all-apps` root;
-do not create both variants' identically named child Applications in one cluster.
-Both variants use the same catalog base; `uks` adds a replica override. No bootstrap root manifest is
-provided for `uks`: Terraform remains the only root owner. Terraform configuration lives
-outside this repository and is not changed here. The repository is public;
-no repository credential Secret is required. The existing `default` AppProject
-must allow this repository, the in-cluster destination, and workload resources.
+`RyanJKS/platform-gitops` is public. Set infrastructure
+`platform_gitops_github_url` to `https://github.com/RyanJKS/platform-gitops.git`,
+matching the catalog child sources. Public HTTPS needs no repository credential.
+The Terraform module repository can continue using SSH on the runner; those
+credentials are not available inside Argo CD's repo-server.
 
-Commit and push these changes to `main` before Argo CD can read them.
-Terraform creates the root; Argo CD asynchronously creates the `chaos-generator`
-child Application and then its workload. Argo CD shows separate `all-apps` and
-`chaos-generator` entries. The child uses automatic sync, pruning, self-healing,
-and `CreateNamespace=true`, targeting namespace `chaos-generator`.
+An SSH root URL without an Argo CD repository key fails with
+`SSH agent requested but SSH_AUTH_SOCK not-specified`. Changing the infrastructure
+URL only updates configuration files: plan and apply `argocd_application_manifest`
+to update an existing root Application, then refresh `all-apps`.
 
-The `eus2` child points directly at `catalog/applications/chaos-generator`. The `uks`
-child points at its cluster overlay, described below. The catalog Deployment
-and Service preserve the functional settings from the upstream
-[intro example](https://github.com/RyanJKS/chaos-generator/tree/main/infrastructure/k8s/examples/intro),
-inspected on 2026-09-27: one replica, image `ryanjks/chaos-generator:v1`, and TCP port
-8501. The base includes the `chaos-generator` Namespace and sets
-`namespace: chaos-generator` in its Kustomization. Direct applies and cluster
-overlays place the Deployment and Service in that namespace. The base excludes
-the Azure application routing Ingress and the commented probes targeting port
-3000. UK South also selects cert-manager and its dedicated AppProject; see
-[HTTPS bootstrap](https.md). East US 2 still selects only chaos-generator.
-No new ingress controller is installed. Image pullability and application runtime
-have not been verified.
+## Prepare the AKS AGIC sandbox
 
-### Override replicas and image tag for uks
+Create AKS, networking, Application Gateway, DNS zones, identities, federated
+credentials, and role assignments through infrastructure first. Authenticate the
+deployment identity with Azure CLI and grant it Kubernetes access. Install
+Terraform, Terragrunt v1.1.5, Azure CLI, and `kubelogin`; the runner must reach AKS.
 
-The `uks` child reads
-`clusters/azure/DEV-JKS/dev/uks/atlas/aks-shared/applications/chaos-generator`.
-Its `kustomization.yaml` imports the catalog base and overrides the Deployment:
+Generated Helm v3 and Kubernetes providers use `kubelogin get-token --login
+azurecli` directly. `az aks get-credentials` writes kubeconfig and is not an exec
+credential command. AKS local accounts are disabled.
 
-```yaml
-replicas:
-  - name: chaos-generator
-    count: 2
-images:
-  - name: ryanjks/chaos-generator
-    newTag: v1
-```
-
-Edit `count` in that overlay to change the desired replica count. Edit `newTag`
-to select an image version; it currently retains the upstream `v1` tag. The shared base
-and the `eus2` variant remain at one replica. Commit and push the overlay change
-to `main`; the child's automatic sync applies it. Manual scaling can
-be reverted by self-healing. Terraform's root still watches the `uks/…/argocd`
-entry point; only the child source points at the workload overlay.
-
-### Review pruning before applying
-
-The `uks` entry point adds cert-manager to its existing chaos-generator selection.
-The cert-manager child does not enable pruning or cascading deletion; see
-[HTTPS pruning](https.md#pruning-and-cleanup). If an existing root is repointed
-to this path, review the resources that root currently tracks before pruning. The previous `eus2` entry point rendered AppProjects `atlas-ml` and `platform`, Application
-`atlas-ml-inference`, and ApplicationSet `platform`. Root pruning can delete these
-objects if the root previously tracked them. Deleting the ApplicationSet can also
-cause Kubernetes garbage collection to delete its generated Applications:
-`platform-cert-manager`, `platform-external-secrets`, `platform-monitoring`,
-`platform-gateway-controller`, `platform-namespaces`, `platform-policy`, and
-`platform-gateway-resources`.
-
-The old ApplicationSet specifies `applicationsSync: create-update` and
-`preserveResourcesOnDeletion: true`. The former does not prevent garbage collection
-when the ApplicationSet itself is deleted. The latter requests that generated
-Applications have no resource-deletion finalizer. Inspect live ownership and finalizers
-before applying: deleting an Application with a resource-deletion finalizer can delete
-its workloads, including shared namespaces or controllers and resources depending on
-them. Without that finalizer, workloads normally remain unmanaged. AppProject deletion
-can be delayed by remaining Applications that reference it. A newly created `all-apps`
-root does not automatically prune objects tracked by another root; resolve existing
-ownership before enabling reconciliation. The unrelated files remain in Git.
-No live resources were inspected or deleted for this change.
-
-### Verify and access
-
-Render locally from the repository root:
+Before creating the root, validate the cluster Kustomizations, fill deployment
+placeholders, configure Argo CD repository access if needed, and publish the
+reviewed configuration to `dev/sandbox`.
 
 ```sh
-kubectl kustomize clusters/azure/DEV-JKS/dev/uks/atlas/aks-shared/argocd
-kubectl kustomize clusters/azure/DEV-JKS/dev/eus2/atlas/aks-shared/argocd
-kubectl kustomize clusters/azure/DEV-JKS/dev/uks/atlas/aks-shared/applications/chaos-generator
-kubectl kustomize catalog/applications/chaos-generator
+CLUSTER=clusters/azure/DEV-JKS/dev/uks/sandbox/aks-agic
+rg -n 'REPLACE_PLACEHOLDER' "$CLUSTER"
+kubectl kustomize "$CLUSTER" > /tmp/aks-agic-applications.yaml
+kubectl kustomize "$CLUSTER/platform/cert-manager/configs"
+kubectl kustomize "$CLUSTER/platform/external-dns/configs"
+kubectl kustomize "$CLUSTER/workloads/chaos-generator/configs"
 ```
 
-To deploy the catalog base directly, select the intended Kubernetes context and
-run from the repository root:
+The root should render AppProjects and child Applications. Each child renders
+its own workloads/controller resources. Nested Kustomizations flatten one render;
+directory nesting does not create Application sync boundaries.
+
+## Initial installation stages
+
+Run from the infrastructure repository with AKS and authentication ready:
 
 ```sh
-kubectl apply -k catalog/applications/chaos-generator
+AKS_AGIC_DIR=infrastructure/azure/live/DEV-JKS/dev/uks/sandbox/platform/aks-agic
+(cd "$AKS_AGIC_DIR/argocd_helm_manifest" && ARGOCD_BOOTSTRAP=true terragrunt run -- plan)
+(cd "$AKS_AGIC_DIR/argocd_helm_manifest" && ARGOCD_BOOTSTRAP=true terragrunt run -- apply)
+(cd "$AKS_AGIC_DIR/argocd_application_manifest" && terragrunt run -- plan)
+(cd "$AKS_AGIC_DIR/argocd_application_manifest" && terragrunt run -- apply)
 ```
 
-This creates the namespace and applies its Deployment and Service. Use `-k`, not
-`-f`, for a directory containing `kustomization.yaml`: `-f` does not render
-Kustomize resources or apply its namespace setting. To deploy the UK South replica
-and image overrides directly, use `-k` with that cluster's application overlay
-path instead. Direct applies do not register an Argo CD Application; if Argo CD
-already manages these resources, its self-healing restores the Git configuration.
-The optional `ingress.yaml` is not selected by the base. After configuring Azure
-application routing, DNS, and cert-manager, apply that manifest separately with
-`-n chaos-generator` if ingress access is required.
+Install Helm before planning the root manifest unit: the Kubernetes provider
+needs Argo CD CRDs during planning. Keep initial stages separate and verify
+readiness before continuing. The root unit declares a Helm dependency for Terragrunt ordering and waits
+for the Application CRD using its generated kubeconfig before plan/apply.
 
-After the changes reach Git and Terraform creates the root, verify the selected
-cluster context, then run:
+The Helm unit is excluded from routine `run --all` operations, and direct
+plan/apply/destroy/import/refresh commands are guarded. Use `ARGOCD_BOOTSTRAP=true`
+only for initial installation or reviewed recovery, never after handoff.
+Terraform continues owning only the root Application after Helm handoff.
+
+## Seed the root and access Argo CD
+
+The root is seeded by the second Terraform stage; there is no extra root YAML to
+apply with kubectl. During the default bootstrap, Argo CD serves HTTPS internally.
+With the intended AKS context selected:
 
 ```sh
-kubectl get applications -n argocd
-kubectl get deployment,pods,service -n chaos-generator
-kubectl port-forward -n chaos-generator service/chaos-generator 8501:8501
+kubectl -n argocd get applications,appprojects
+kubectl -n argocd rollout status deployment/argocd-server --timeout=300s
+kubectl -n argocd rollout status deployment/argocd-repo-server --timeout=300s
+kubectl -n argocd port-forward service/argocd-server 8080:443
 ```
 
-Open `http://localhost:8501`. If the child is missing, check the root's source path,
-revision, and sync status. If Pods are not ready, inspect Pod events and image-pull
-errors. Do not trigger chaos operations as part of bootstrap verification.
+Open `https://localhost:8080` using the installation's initial TLS certificate.
+Retrieve the initial admin password locally or use configured SSO; do not commit
+credentials. After the Azure runtime profile is applied, Application Gateway
+terminates public TLS and forwards HTTP to Argo CD. The intended runtime hostname
+is `argocd.jkslabs.site` and certificate Secret is `argocd-ingress-tls`.
+Follow [public access debugging](debugging.md#check-public-argo-cd-access).
 
-## Market example
+## Transfer Helm resource ownership to Argo CD
 
-Local kind has its own [bootstrap and migration guide](local-kind.md).
-The remaining Azure market root selects only its namespace, workload AppProject,
-and API/worker Applications. Terraform must already provide Argo CD. From the
-repository root, after changes reach `main`:
+The child must remain manually synced until Terraform relinquishes its release.
+The minimal installation and runtime configuration intentionally differ: the
+first GitOps sync changes sizing, Redis, ingress, and other runtime settings.
+Keep release name and namespace `argocd` and review chart/image versions and the
+full diff before adoption. Existing extension/raw-manifest installations need a
+separate migration; this handoff assumes the official chart is already installed.
 
-```sh
-CLUSTER=clusters/azure/DEV-JKS/dev/eus2/atlas/aks-atlas-market
-kubectl --context "$CONTEXT" apply -f "$CLUSTER/bootstrap/root.yaml"
-```
+1. Pause jobs that can modify this release. Confirm the root has created child
+   `argocd`, and review its diff against the installed chart resources.
+2. Back up the Helm unit's Terraform state and verify that it contains the expected
+   release. From that unit directory, these operator commands remove state
+   ownership without uninstalling resources:
 
-The root retains the legacy name `azure-dev-uksouth-atlas-market` despite its `eus2`
-source path. Verify the intended context; naming does not move cloud resources.
-Sync the root without pruning, then sync the workload Applications after configuring
-real images and replicas. They retain manual sync and zero-replica example defaults.
-The API HTTPRoute requires externally supplied Gateway API CRDs and a compatible
-Gateway/controller. The removed platform bundles no longer provide these resources.
+   ```sh
+   umask 077
+   STATE_BACKUP=$(mktemp /tmp/argocd-helm-state.XXXXXX)
+   terragrunt run -- state pull > "$STATE_BACKUP"
+   terragrunt run -- state list
+   terragrunt run -- state rm helm_release.this
+   terragrunt run -- state list
+   ```
 
-## Migrate existing platform Applications
+   Securely retain the validated backup. **Do not run Terraform destroy or Helm
+   uninstall to transfer ownership.**
+3. Manually sync the Argo CD child and verify `Synced`, `Healthy`, controller/server
+   readiness, and continued API/UI access. Investigate immutable selectors,
+   generated Secrets, or unexpected deletions before allowing the rollout.
+4. Remove the cluster patch disabling the child's automatic sync and publish it.
+   Catalog defaults enable automatic sync and self-heal; pruning stays disabled.
+   Leave `ARGOCD_BOOTSTRAP` unset in subsequent infrastructure runs.
 
-The platform ApplicationSet and its catalog bundles have been removed. Before
-syncing a previously deployed market root, inspect its tracked resources, the old
-`platform` ApplicationSet, child Applications, owner references, and finalizers.
-Keep pruning disabled during this review. The old ApplicationSet may still control
-children even though it is no longer selected in Git.
+Afterward, the child merges runtime values in this order:
 
-Retire the old ApplicationSet with orphan propagation only after reviewing its
-live ownership; preserve generated Applications and workloads while deciding their
-fate individually. A resource-deletion finalizer can cause deletion of a child's
-workloads. Namespace deletion can remove unrelated resources. Do not cascade-delete
-an ApplicationSet or namespace bundle as a shortcut for this migration.
+1. `catalog/platform/argocd/values.yaml`.
+2. `catalog/platform/argocd/azure-values.yaml`.
+3. Cluster `helm.valuesObject` from `platform/argocd/application-patches.yaml`.
 
-Market now selects `atlas-market` directly from the shared namespace catalog.
-Before root adoption, detach this namespace from the former `platform-namespaces`
-Application's tracking without deleting it, and retire that former owner so it
-cannot reclaim the namespace. Preserve existing namespace policy labels until
-reviewed separately. Workload AppProject and Application identities remain unchanged.
+Later maps override earlier maps; later lists replace earlier lists. Argo CD
+templates Helm manifests and reconciles Kubernetes resources; it does not update
+the original Helm release record, which may remain stale. Future chart/value
+changes go through GitOps. `ignore_changes` does not relinquish Helm ownership.
 
-Review remaining legacy platform Applications individually. Keep needed live
-services until their replacement or retirement is explicitly planned. Remove the
-old platform AppProject only when no Applications still use it. This repository
-change does not perform any live uninstall, namespace migration, or ownership transfer.
+## Sync the children and verify deployment
+
+The AKS AGIC sandbox root uses this sync order:
+
+| Resource | Wave |
+| --- | --- |
+| AppProjects | `-5` |
+| cert-manager Application | `-4` |
+| AGIC Application | `-3` |
+| External DNS Application | `-2` |
+| ClusterIssuer | `-1` |
+| chaos-generator Application | `0` |
+| Argo CD Application | `1` |
+
+The catalog supplies the cert-manager and issuer waves; cluster overlays inherit
+them. Project waves remain in the cluster's AppProject definitions.
+
+The issuer uses `SkipDryRunOnMissingResource=true` because its CRD comes from
+the cert-manager child Application. Argo CD validates the root before executing
+waves; this annotation lets a fresh cluster pass validation while the CRD is
+absent. It does not install the CRD or bypass readiness checks.
+
+Verify cert-manager controller and webhook readiness first. Check AGIC controller readiness and Application Gateway access
+before checking External DNS workload identity and zone discovery. Check issuer
+readiness and workload certificates next. Apply Argo CD runtime configuration only
+after the ownership handoff above.
+
+The full runtime values include Application health customization for root waves.
+The minimal bootstrap does not include that customization, so initial waves order
+child definitions without proving controller readiness; verify children manually.
+Existing children reconcile independently of later root syncs.
+
+Runtime values select two server/repo-server replicas, one controller with `250m`
+CPU and `1Gi` memory requests and `2Gi` memory limit, and Redis HA. Redis HA requires
+at least three schedulable nodes. Verify capacity and TLS/DNS before public access.
+See [debugging](debugging.md) for controller and certificate checks.
+
+## Recovery
+
+Keep a known-good Git commit and AKS access independent of Argo CD. If it can
+reconcile, revert the bad runtime change in Git. Otherwise render and apply the
+reviewed known-good chart/manifests with kubectl to restore the controller, then
+reconcile that revision. Do not use the stale Helm record for an unreviewed
+rollback or uninstall. Restoring Terraform ownership requires a separate reviewed
+migration with the child suspended. No live installation, state removal, or
+recovery is performed by this repository change.

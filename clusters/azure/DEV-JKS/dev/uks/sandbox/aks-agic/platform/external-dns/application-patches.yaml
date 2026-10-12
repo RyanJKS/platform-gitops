@@ -1,0 +1,25 @@
+- op: add
+  path: /spec/sources/0/helm/valuesObject
+  value:
+    provider:
+      name: azure
+    podLabels:
+      azure.workload.identity/use: "true"
+    extraVolumes:
+      - name: azure-config
+        configMap:
+          name: external-dns-azure
+    extraVolumeMounts:
+      - name: azure-config
+        mountPath: /etc/kubernetes
+        readOnly: true
+    serviceAccount:
+      annotations:
+        azure.workload.identity/client-id: e7d96cf0-feab-440f-8836-1b4cf3a7b2c8 # TODO: Update when needed
+        azure.workload.identity/tenant-id: bac158f2-9dfe-4f66-b3e8-7fed8227d08f
+    domainFilters:
+      - jkslabs.site
+    txtOwnerId: dev-uks-sandbox-aks-agic
+    extraArgs:
+      - --azure-config-file=/etc/kubernetes/azure.json
+      - --ingress-class=azure-application-gateway
