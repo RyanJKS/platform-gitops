@@ -72,6 +72,11 @@ The current HTTP-01 solver routes through AGIC and needs no Azure managed identi
 on cert-manager. An Azure DNS DNS-01 solver would require cert-manager's own Azure
 authentication configuration and DNS permissions.
 
+The AKS AGIC sandbox's cert-manager Application patch ignores the two exact
+namespace exclusions AKS injects into `cert-manager-webhook` and enables
+`RespectIgnoreDifferences=true` to preserve them during sync. This provider-specific
+rule stays in the cluster overlay. Other webhook fields remain managed.
+
 Waves order child Applications when their parent syncs. The shared Argo CD Helm values provide the Application health
 check that makes the parent wait for each child to report `Synced` and `Healthy`.
 Other Argo CD installations need equivalent Application health checks to wait
