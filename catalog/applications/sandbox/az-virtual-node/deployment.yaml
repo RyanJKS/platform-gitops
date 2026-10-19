@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: virtual-node-app
+  namespace: virtual-node-app
+  labels:
+    app: virtual-node-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: virtual-node-app
+  template:
+    metadata:
+      labels:
+        app: virtual-node-app
+    spec:
+      containers:
+        - name: chaos-generator-container
+          image: ryanjks/chaos-generator:757afd
+          ports:
+            - containerPort: 8501
+      # below is only for virutal node v1
+      nodeSelector:
+        kubernetes.io/role: agent
+        beta.kubernetes.io/os: linux
+        type: virtual-kubelet
+      tolerations:
+        - key: virtual-kubelet.io/provider
+          operator: Exists
+
+  strategy:
+    type: RollingUpdate
+
+    rollingUpdate:
+      maxUnavailable: 1 # Specifies the maximum number of Pods that can be unavailable during the update.
+      maxSurge: 1 # Specifies the maximum number of Pods that can be created over the desired number of Pods.
