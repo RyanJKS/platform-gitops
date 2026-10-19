@@ -1,0 +1,38 @@
+# https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sample-api-deployment
+  labels:
+    app: sample-api-app
+spec:
+  selector:
+    matchLabels:
+      app: sample-api-app
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: sample-api-app
+      labels:
+        app: sample-api-app
+    spec:
+      containers:
+        - name: sample-api-app
+          image: ryanjks/atlas-orders-api:1.0.0
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 100m
+              memory: 512Mi
+          ports:
+            - containerPort: 8003
+      restartPolicy: Always
