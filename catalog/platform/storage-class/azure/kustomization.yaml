@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+metadata:
+  namespace: default # this will set the namespace for all KRM objects mentioned in this kustomize file
+resources:
+  - blobfuse-sc
+# generators:
+# - ...
+# transformers:
+# - ...
+# validators:
+# - ...
+
