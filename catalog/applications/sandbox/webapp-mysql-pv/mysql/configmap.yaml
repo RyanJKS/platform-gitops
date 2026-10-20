@@ -12,7 +12,7 @@ kind: ConfigMap
 metadata:
   name: mysql-configs
 data:
-  db_hostname: "mysql"
+  db_hostname: "mysql.default.svc.cluster.local" ## ALWAYS USE FULL DNS HOST NAME FOR SERVICE <service name>.<namespace-name>.svc.cluster.local
   db_port: "3306"
   db_name: "webappdb"
   db_username: "root"
