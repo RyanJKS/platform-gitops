@@ -158,9 +158,21 @@ Argo CD values merge in shared, Azure, then cluster order. Its cluster patch kee
 automatic sync disabled until ownership handoff. Validate root selection and
 child resources before syncing. Follow [bootstrap ownership handoff](bootstrap.md).
 
+## Traefik templates
+
+Traefik offers separate Ingress and Gateway API values templates under
+`catalog/platform/traefik/configs/`. Copy one template's mapping into an inline
+cluster Kustomize patch that replaces `spec.sources[0].helm.valuesObject`.
+The catalog Application leaves that object empty for the cluster to fill.
+Traefik uses
+`__PLACEHOLDER__` markers; replace each marker according to its field before
+deployment. See [Traefik README](https://github.com/RyanJKS/platform-gitops/blob/HEAD/catalog/platform/traefik/README.md) for prerequisites, cluster
+overlay examples, TLS setup, and validation.
+
 ## Editable markers and verification
 
-Use `REPLACE_PLACEHOLDER` for every editable marker. The YAML field, shell variable,
+Use `REPLACE_PLACEHOLDER` for editable markers outside the Traefik templates.
+Traefik uses `__PLACEHOLDER__`. The YAML field, shell variable,
 or surrounding instructions identify the required value. The provider patch appends its catalog values file. Fill remaining deployment inputs with their actual values.
 Do not replace all
 markers with one value: each field needs its own configuration. Unselected
@@ -170,6 +182,7 @@ remaining markers before deployment.
 ```sh
 kubectl kustomize clusters/azure/DEV-JKS/dev/uks/sandbox/aks-agic
 rg -n 'REPLACE_PLACEHOLDER' catalog clusters
+rg -n '__PLACEHOLDER__' catalog/platform/traefik clusters
 ```
 
 Rendering checks composition and paths. It does not prove cloud access, DNS, or
