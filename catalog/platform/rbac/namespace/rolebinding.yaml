@@ -1,0 +1,16 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: full-access-rolebinding # update as needed
+  namespace: __PLACEHOLDER__
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: full-access-role # to match role name
+subjects:
+  - kind: Group
+    namespace: __PLACEHOLDER__
+    name: "00000-0000-0000-0000-0000" ## AAD Group ID
+  - kind: ServiceAccount
+    namespace: __PLACEHOLDER__
+    name: <service-account-name> # update as needed
