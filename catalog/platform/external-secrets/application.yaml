@@ -3,7 +3,6 @@ kind: Application
 metadata:
   name: external-secrets
   namespace: argocd
-
 spec:
   project: platform-apps
   source:
