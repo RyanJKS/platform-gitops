@@ -6,4 +6,5 @@ resources:
   - ns-limit-range
   - ns-resource-quotas
   - deployment.yaml
+  - deployment-hpa.yaml
   - service.yaml
