@@ -1,0 +1,46 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: envoy-gateway
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  project: platform-apps
+  sources:
+    - repoURL: docker.io/envoyproxy
+      chart: gateway-helm
+      targetRevision: v1.9.2
+      helm:
+        releaseName: envoy-gateway
+        skipTests: true
+        skipCrds: true
+        valueFiles:
+          - $values/catalog/platform/envoy-gateway/values.yaml
+    # Install only Envoy Gateway extension CRDs. The gateway-api Application
+    # remains the owner of the shared Gateway API definitions.
+    - repoURL: docker.io/envoyproxy
+      chart: gateway-crds-helm
+      targetRevision: v1.9.2
+      helm:
+        releaseName: envoy-gateway-crds
+        skipTests: true
+        valuesObject:
+          crds:
+            gatewayAPI:
+              enabled: false
+            envoyGateway:
+              enabled: true
+    - repoURL: https://github.com/RyanJKS/platform-gitops.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: envoy-gateway-system
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

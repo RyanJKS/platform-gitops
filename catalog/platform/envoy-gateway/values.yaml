@@ -1,0 +1,22 @@
+# Shared controller values for Azure, AWS, GCP, and local Kubernetes clusters.
+# The separate gateway-crds-helm source installs Envoy Gateway extension CRDs.
+# The gateway-api Application owns the shared Gateway API CRDs.
+crds:
+  enabled: false
+
+deployment:
+  replicas: 1
+
+config:
+  envoyGateway:
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    provider:
+      type: Kubernetes
+    logging:
+      level:
+        default: info
+
+# This is the controller's internal Service, not the managed Envoy proxy Service.
+service:
+  type: ClusterIP
