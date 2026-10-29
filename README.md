@@ -4,7 +4,7 @@ Declarative Kubernetes platform capabilities and application deployments,
 reconciled by Argo CD. Cluster provisioning, application source code, and image
 builds belong in other repositories.
 
-- `catalog/platform/`: reusable controller Applications, Helm values, and configuration.
+- `catalog/platform/`: reusable controller Applications, Helm values, and sample configuration to copy into clusters.
 - `catalog/applications/`: reusable workload manifests.
 - `clusters/`: cluster selections, permissions, and deployment-specific overrides.
 - `docs/`: bootstrap, configuration, and debugging guides.
@@ -12,7 +12,12 @@ builds belong in other repositories.
 Cloud paths use
 `clusters/<cloud>/<account>/<environment>/<region>/<domain>/<cluster>/`.
 
-Terraform installs the official Argo CD chart with minimal chart defaults and
+For AKS Envoy, [Helm bootstrap](docs/helm-bootstrap.md) installs Cilium and Argo CD
+from the cluster bootstrap directory and seeds the `all-apps` root Application.
+Both releases remain Helmfile-managed.
+The Cilium catalog contains reusable values and documentation without an Application.
+
+For the AKS AGIC sandbox, Terraform installs the official Argo CD chart with minimal chart defaults and
 creates the root Application. The root creates the AppProjects from Git. Shared catalog, Azure, and
 cluster values configure the GitOps self-management child after handoff.
 The AKS AGIC root then creates an Argo CD self-management child. Its automatic
