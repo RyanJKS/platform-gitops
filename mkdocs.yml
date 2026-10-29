@@ -3,6 +3,7 @@ site_description: Kubernetes platform capabilities and application deployments m
   by Argo CD
 nav:
 - Bootstrap: bootstrap.md
+- AKS Envoy Helm bootstrap: helm-bootstrap.md
 - Platform catalog: platform-catalog.md
 - Debugging: debugging.md
 plugins:

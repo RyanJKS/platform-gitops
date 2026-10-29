@@ -1,5 +1,8 @@
 # Bootstrap Argo CD and transfer ownership
 
+For AKS Envoy, use the separate [Helm bootstrap workflow](helm-bootstrap.md).
+The Terraform handoff below applies to the AKS AGIC sandbox.
+
 Terraform installs a basic Argo CD chart and creates the `all-apps` root
 Application in the built-in `default` project. The cluster root creates two
 AppProjects and five child Applications. Argo CD's self-management child uses
