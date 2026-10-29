@@ -1,0 +1,106 @@
+# Copy this profile into a cluster and replace every __PLACEHOLDER__ before use.
+# Requires AKS BYOCNI: network_plugin = "none". Node IPs still use the VNet.
+# https://docs.cilium.io/en/stable/network/servicemesh/gateway-api/gateway-api/
+aksbyocni:
+  enabled: true
+
+ipam:
+  mode: cluster-pool
+  operator:
+    # Pod pool, separate from VNet, service, peered, and on-premises ranges.
+    clusterPoolIPv4PodCIDRList:
+      - __PLACEHOLDER__ # Example: 10.244.0.0/16.
+    # /24 allocations from a /16 provide 256 node blocks, not 256 pods per node.
+    clusterPoolIPv4MaskSize: 24
+
+nodeinit:
+  enabled: true
+
+socketLB:
+  # Keep socket-level load balancing in the host network namespace.
+  hostNamespaceOnly: true
+
+kubeProxyReplacement: true
+# Direct API hostname/IP, without https://. Never use the Kubernetes Service IP.
+k8sServiceHost: __PLACEHOLDER__
+k8sServicePort: 443
+routingMode: tunnel
+tunnelProtocol: vxlan
+
+gatewayAPI:
+  # Install compatible Gateway API CRDs before this chart.
+  enabled: true
+  gatewayClass:
+    create: "true" # Chart expects a string: auto, true, or false.
+  # Enables HTTP/2 TLS negotiation and Service appProtocol support.
+  enableAlpn: true
+
+hubble:
+  enabled: true
+  relay:
+    enabled: true
+    tolerations:
+      - key: CriticalAddonsOnly
+        operator: Exists
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: agentpool
+                  operator: In
+                  values:
+                    - __PLACEHOLDER__ # Existing system pool name.
+  ui:
+    enabled: true
+    tolerations:
+      - key: CriticalAddonsOnly
+        operator: Exists
+    # Optional: restrict the UI to a pool, or use the AKS system-mode label.
+    nodeSelector:
+      agentpool: __PLACEHOLDER__
+    # Optional public access: copy these keys and supply existing TLS/routing.
+    # ingress:
+    #   enabled: true
+    #   className: __PLACEHOLDER__
+    #   hosts: [__PLACEHOLDER__]
+    #   tls:
+    #     - secretName: __PLACEHOLDER__
+    #       hosts: [__PLACEHOLDER__]
+  metrics:
+    enabled:
+      - dns:query;ignoreAAAA
+      - drop
+      - tcp
+      - flow
+      - icmp
+      - http
+    # Prometheus CRDs may not exist during Cilium bootstrap.
+    serviceMonitor:
+      enabled: false
+      # Enable later only when CRDs exist and labels match Prometheus selection.
+      # labels:
+      #   release: __PLACEHOLDER__
+    dashboards:
+      enabled: true
+
+dashboards:
+  enabled: true
+
+# Suitable for a small sandbox. Review availability for production clusters.
+operator:
+  replicas: 1
+  dashboards:
+    enabled: true
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: false
+
+prometheus:
+  enabled: true
+  serviceMonitor:
+    enabled: false
+
+# For upgrades only: preserve settings from the original installed minor.
+# upgradeCompatibility: __PLACEHOLDER__ # Quoted version, for example "1.19".
