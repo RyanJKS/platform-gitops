@@ -1,0 +1,57 @@
+repositories:
+  - name: cilium
+    url: https://helm.cilium.io
+  - name: argo
+    url: https://argoproj.github.io/argo-helm
+
+helmDefaults:
+  createNamespace: true
+  wait: true
+  timeout: 600
+
+releases:
+  - name: cilium
+    namespace: kube-system
+    chart: cilium/cilium
+    version: "1.20.3"
+    # Gateway API CRDs are managed by Argo CD after bootstrap.
+    disableValidationOnInstall: true
+    values:
+      - values/cilium.yaml
+      - values/cilium-api.yaml.gotmpl
+
+  # Required before Cilium upgrades to check compatibility and pre-pull images:
+  # https://docs.cilium.io/en/stable/operations/upgrade/#running-pre-flight-check-required
+  # Set the target version here first; leave the installed Cilium version unchanged.
+  # Enable and diff ONLY this release with --selector name=cilium-preflight.
+  # Review, then use --interactive apply. After checks pass, disable it and repeat.
+  # Then update the main Cilium version. See docs/helm-bootstrap.md for the sequence.
+  - name: cilium-preflight
+    namespace: kube-system
+    chart: cilium/cilium
+    version: "1.20.3"
+    installed: false
+    values:
+      # Only share the API endpoint; main values would create duplicate Hubble,
+      # node-init, dashboard, and Gateway API resources in the preflight release.
+      - values/cilium-api.yaml.gotmpl
+    set:
+      - name: aksbyocni.enabled
+        value: true
+      - name: preflight.enabled
+        value: true
+      - name: agent
+        value: false
+      - name: operator.enabled
+        value: false
+
+  - name: argocd
+    namespace: argocd
+    chart: argo/argo-cd
+    version: "10.9.0"
+    # The first diff includes a root Application before Argo CD CRDs exist.
+    disableValidationOnInstall: true
+    needs:
+      - kube-system/cilium
+    values:
+      - values/argocd.yaml

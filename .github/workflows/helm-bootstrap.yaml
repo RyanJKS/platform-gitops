@@ -1,0 +1,149 @@
+name: Helm bootstrap
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+
+concurrency:
+  group: helm-bootstrap-aks-envoy
+  cancel-in-progress: false
+
+env:
+  BOOTSTRAP_PATH: clusters/azure/DEV-JKS/dev/uks/sandbox/aks-envoy/bootstrap
+
+jobs:
+  plan:
+    name: Review Helmfile diff
+    runs-on: ubuntu-24.04
+    environment: aks-envoy-plan
+    timeout-minutes: 15
+    outputs:
+      changes: ${{ steps.diff.outputs.changes }}
+      api_host: ${{ steps.setup.outputs.api-host }}
+    steps:
+      - name: Check out reviewed commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Require an approval policy for apply
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/check-bootstrap-approval.sh
+
+      - name: Set up tools and AKS access
+        id: setup
+        uses: ./.github/actions/helm-bootstrap-setup
+        with:
+          azure-client-id: ${{ vars.AZURE_CLIENT_ID }}
+          azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          azure-subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          aks-resource-group: ${{ vars.AKS_RESOURCE_GROUP }}
+          aks-cluster-name: ${{ vars.AKS_CLUSTER_NAME }}
+
+      - name: Diff bootstrap releases
+        id: diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          helmfile --no-color --file "$BOOTSTRAP_PATH/helmfile.yaml" \
+            diff --detailed-exitcode --suppress-secrets 2>&1 | tee "$RUNNER_TEMP/helm-bootstrap-diff.txt"
+          statuses=("${PIPESTATUS[@]}")
+          set -e
+          diff_status=${statuses[0]}
+          if [[ "${statuses[1]}" != 0 ]]; then
+            exit "${statuses[1]}"
+          fi
+          if [[ "$diff_status" != 0 && "$diff_status" != 2 ]]; then
+            exit "$diff_status"
+          fi
+          if [[ "$diff_status" == 2 ]]; then
+            echo "changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changes=false" >> "$GITHUB_OUTPUT"
+          fi
+          {
+            echo "### Helm bootstrap diff"
+            echo "Commit: $GITHUB_SHA"
+            echo "AKS API: $CILIUM_K8S_SERVICE_HOST"
+            echo "Review this job's logs or the helm-bootstrap-diff artifact before approving the aks-envoy deployment."
+            echo "Helmfile diff exit code: $diff_status (0 = no changes, 2 = changes)."
+            echo "Secret values are suppressed."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload diff for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: helm-bootstrap-diff
+          path: ${{ runner.temp }}/helm-bootstrap-diff.txt
+          retention-days: 3
+          if-no-files-found: error
+
+      - name: Remove runner kubeconfig
+        if: always()
+        run: rm -f "$RUNNER_TEMP/aks-envoy.kubeconfig"
+
+  apply:
+    name: Apply approved Helmfile changes
+    needs: plan
+    if: needs.plan.outputs.changes == 'true'
+    runs-on: ubuntu-24.04
+    # Required reviewers must be configured in repository Settings > Environments.
+    environment:
+      name: aks-envoy
+      url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    timeout-minutes: 40
+    steps:
+      - name: Check out reviewed commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Verify approval policy remains configured
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/check-bootstrap-approval.sh
+
+      - name: Set up tools and AKS access
+        id: setup
+        uses: ./.github/actions/helm-bootstrap-setup
+        with:
+          azure-client-id: ${{ vars.AZURE_CLIENT_ID }}
+          azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          azure-subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          aks-resource-group: ${{ vars.AKS_RESOURCE_GROUP }}
+          aks-cluster-name: ${{ vars.AKS_CLUSTER_NAME }}
+
+      - name: Verify apply targets the reviewed cluster
+        env:
+          PLANNED_API_HOST: ${{ needs.plan.outputs.api_host }}
+          CURRENT_API_HOST: ${{ steps.setup.outputs.api-host }}
+        run: |
+          if [[ -z "$PLANNED_API_HOST" || "$PLANNED_API_HOST" != "$CURRENT_API_HOST" ]]; then
+            echo "::error::Apply must target the same AKS API hostname shown in the reviewed diff."
+            exit 1
+          fi
+
+      - name: Apply bootstrap releases through Helmfile
+        run: helmfile --no-color --file "$BOOTSTRAP_PATH/helmfile.yaml" apply --suppress-secrets
+
+      - name: Verify controller readiness
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl -n kube-system rollout status daemonset/cilium --timeout=600s
+          kubectl -n kube-system rollout status deployment/cilium-operator --timeout=600s
+          kubectl -n kube-system rollout status daemonset/cilium-envoy --timeout=600s
+          kubectl -n kube-system rollout status deployment/hubble-relay --timeout=600s
+          kubectl -n kube-system rollout status deployment/hubble-ui --timeout=600s
+          kubectl -n argocd rollout status deployment/argocd-server --timeout=600s
+          kubectl -n argocd rollout status deployment/argocd-repo-server --timeout=600s
+
+      - name: Remove runner kubeconfig
+        if: always()
+        run: rm -f "$RUNNER_TEMP/aks-envoy.kubeconfig"

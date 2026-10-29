@@ -1,0 +1,87 @@
+# Cluster-owned copy of catalog/platform/cilium/configs/azure/values.yaml.
+# Gateway API requirements:
+# https://docs.cilium.io/en/stable/network/servicemesh/gateway-api/gateway-api/
+aksbyocni:
+  enabled: true
+
+ipam:
+  mode: cluster-pool
+  operator:
+    clusterPoolIPv4PodCIDRList:
+      # Separate from the 10.2.0.0/16 VNet and 10.2.1.0/24 node subnet.
+      # Also verify service, peered, and on-premises ranges before deployment.
+      - 10.244.0.0/16
+    clusterPoolIPv4MaskSize: 24
+
+nodeinit:
+  enabled: true
+
+socketLB:
+  hostNamespaceOnly: true
+
+# The direct API hostname comes from values/cilium-api.yaml.gotmpl at runtime.
+kubeProxyReplacement: true
+k8sServicePort: 443
+routingMode: tunnel
+tunnelProtocol: vxlan
+
+# Enable after the Argo CD gateway-api Application has established its CRDs.
+gatewayAPI:
+  enabled: false
+  gatewayClass:
+    create: "false"
+  enableAlpn: true
+
+hubble:
+  enabled: true
+  relay:
+    enabled: true
+    tolerations:
+      - key: CriticalAddonsOnly
+        operator: Exists
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: kubernetes.azure.com/mode
+                  operator: In
+                  values:
+                    - system
+  ui:
+    enabled: true
+    tolerations:
+      - key: CriticalAddonsOnly
+        operator: Exists
+    nodeSelector:
+      kubernetes.azure.com/mode: system
+  metrics:
+    enabled:
+      - dns:query;ignoreAAAA
+      - drop
+      - tcp
+      - flow
+      - icmp
+      - http
+    # Prometheus CRDs install separately, after Cilium on fresh clusters.
+    serviceMonitor:
+      enabled: false
+    dashboards:
+      enabled: true
+
+dashboards:
+  enabled: true
+
+operator:
+  replicas: 1
+  dashboards:
+    enabled: true
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: false
+
+prometheus:
+  enabled: true
+  serviceMonitor:
+    enabled: false
