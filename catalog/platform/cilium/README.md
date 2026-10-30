@@ -73,8 +73,8 @@ For example, from the repository root:
 
 ```sh
 CLUSTER=clusters/azure/DEV-JKS/dev/uks/sandbox/aks-envoy
-mkdir -p "$CLUSTER/bootstrap/values"
-cp catalog/platform/cilium/configs/azure/values.yaml "$CLUSTER/bootstrap/values/cilium.yaml"
+mkdir -p "$CLUSTER/bootstrap/cilium"
+cp catalog/platform/cilium/configs/azure/values.yaml "$CLUSTER/bootstrap/cilium/values.yaml"
 # Replace markers in the copied files and review chart/CRD versions.
 # The Envoy Helmfile also requires the real API hostname in this variable.
 export CILIUM_K8S_SERVICE_HOST=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}' \
