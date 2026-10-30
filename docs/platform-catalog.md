@@ -205,6 +205,21 @@ Traefik uses
 deployment. See [Traefik README](https://github.com/RyanJKS/platform-gitops/blob/HEAD/catalog/platform/traefik/README.md) for prerequisites, cluster
 overlay examples, TLS setup, and validation.
 
+## AKS DNS templates
+
+`catalog/platform/dns/` contains CoreDNS query logging, commented internal DNS
+examples, LocalDNS JSON, and a test pod. CoreDNS examples cover static hosts,
+Service aliases, namespace-preserving or default-namespace regex aliases, and
+private zone forwarding. Optional LocalDNS caches queries on each
+node; CoreDNS still handles cluster names. External DNS publishes cloud records.
+
+Copy templates into cluster configuration. Apply CoreDNS ConfigMap through
+Kubernetes; apply LocalDNS JSON through Azure node pool API. LocalDNS profile
+changes reimage nodes. Neither template installs automatically.
+
+See [DNS README](https://github.com/RyanJKS/platform-gitops/blob/HEAD/catalog/platform/dns/README.md)
+for prerequisites, commands, log access, and verification.
+
 ## Editable markers and verification
 
 Use `REPLACE_PLACEHOLDER` for editable markers outside the Traefik and Cilium templates.
