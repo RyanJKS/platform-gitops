@@ -1,0 +1,55 @@
+ipam:
+  mode: kubernetes
+
+# Kubernetes service configuration
+# needs to be kind-<cluster name>-control-plane
+k8sServiceHost: kind-envoy-cilium-control-plane
+k8sServicePort: 6443
+
+kubeProxyReplacement: true
+
+gatewayApi:
+  enabled: true
+  gatewayClass:
+    create: "false"
+
+# Cilium internal health / operational metrics
+prometheus:
+  enabled: true
+  serviceMonitor:
+    enabled: false
+
+operator:
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: false
+
+# Envoy proxy metrics
+envoy:
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: false
+
+# Network flow observability
+hubble:
+  enabled: true
+
+  relay:
+    enabled: true
+
+  ui:
+    enabled: true
+
+  metrics:
+    enabled:
+      - dns
+      - drop
+      - tcp
+      - flow
+      - icmp
+      - port-distribution
+
+    serviceMonitor:
+      enabled: false
