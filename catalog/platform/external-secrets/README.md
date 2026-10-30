@@ -7,6 +7,11 @@ Create `SecretStore` to "mount" to keyvault and then `ExternalSecret` so it can 
 **`SecretStore` is usable within one namespace. `ClusterSecretStore` can be shared across namespaces.** Both describe how ESO connects and authenticates to Key Vault; neither contains the actual secret values.
 Docs: https://external-secrets.io/latest/api/secretstore/
 
+AKS Envoy uses Helmfile for operator and separate local configuration chart.
+See [configuration chart](../../../clusters/azure/DEV-JKS/dev/uks/sandbox/aks-envoy/bootstrap/external-secrets-config/README.md)
+for map-based ClusterSecretStores, reader ServiceAccounts, and ExternalSecrets.
+Keep catalog Argo CD Application unselected when Helmfile owns operator.
+
 |                       | `SecretStore`                                        | `ClusterSecretStore`                                                             |
 | --------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------- |
 | Kubernetes scope      | Namespaced                                           | Cluster-wide                                                                     |
