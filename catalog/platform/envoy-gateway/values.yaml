@@ -1,6 +1,6 @@
 # Shared controller values for Azure, AWS, GCP, and local Kubernetes clusters.
 # The separate gateway-crds-helm source installs Envoy Gateway extension CRDs.
-# The gateway-api Application owns the shared Gateway API CRDs.
+# Shared Gateway API CRDs retain their existing Helmfile or Argo CD owner.
 crds:
   enabled: false
 

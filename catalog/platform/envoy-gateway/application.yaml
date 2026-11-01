@@ -17,8 +17,8 @@ spec:
         skipCrds: true
         valueFiles:
           - $values/catalog/platform/envoy-gateway/values.yaml
-    # Install only Envoy Gateway extension CRDs. The gateway-api Application
-    # remains the owner of the shared Gateway API definitions.
+    # Install only Envoy Gateway extension CRDs. Shared Gateway API definitions
+    # retain their existing owner (Helmfile for the AKS Envoy cluster).
     - repoURL: docker.io/envoyproxy
       chart: gateway-crds-helm
       targetRevision: v1.9.2
