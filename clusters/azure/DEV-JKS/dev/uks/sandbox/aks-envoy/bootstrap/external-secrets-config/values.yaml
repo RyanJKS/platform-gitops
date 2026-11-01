@@ -1,0 +1,52 @@
+# Configure identity, vault, and remote keys before the first apply.
+# This release creates argocd namespace and its OIDC Secret before Argo CD starts.
+# Secret payloads stay in Key Vault. Generic workload examples remain disabled.
+namespaces:
+  argocd:
+    enabled: true
+serviceAccounts:
+  # Must match the ServiceAccount name in the UAMI federated credential subject:
+  # system:serviceaccount:argocd:argocd-server
+  argocd-server:
+    enabled: true
+    namespace: argocd
+    # Argo CD server needs Kubernetes API access as well as workload identity.
+    automountServiceAccountToken: true
+    annotations:
+      azure.workload.identity/client-id: REPLACE_PLACEHOLDER
+      azure.workload.identity/tenant-id: bac158f2-9dfe-4f66-b3e8-7fed8227d08f
+clusterSecretStores:
+  platform-secrets:
+    enabled: true
+    spec:
+      provider:
+        azurekv:
+          authType: WorkloadIdentity
+          vaultUrl: https://sandboxuksdevakv.vault.azure.net
+          serviceAccountRef:
+            # Must match serviceAccounts.argocd-server and the UAMI federation subject.
+            name: argocd-server
+            namespace: argocd
+      conditions:
+        - namespaces:
+            - argocd
+externalSecrets:
+  argocd-oidc:
+    enabled: true
+    namespace: argocd
+    spec:
+      refreshInterval: 1h
+      secretStoreRef:
+        name: platform-secrets
+        kind: ClusterSecretStore
+      target:
+        name: argocd-oidc
+        creationPolicy: Owner
+        template:
+          metadata:
+            labels:
+              app.kubernetes.io/part-of: argocd
+      data:
+        - secretKey: client-id
+          remoteRef:
+            key: argocd-client-id

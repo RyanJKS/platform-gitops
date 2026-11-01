@@ -1,6 +1,5 @@
 # Cluster-owned copy of catalog/platform/cilium/configs/azure/values.yaml.
-# Gateway API requirements:
-# https://docs.cilium.io/en/stable/network/servicemesh/gateway-api/gateway-api/
+# Envoy Gateway owns Gateway API routing; Cilium provides the CNI and Hubble.
 aksbyocni:
   enabled: true
 
@@ -19,18 +18,17 @@ nodeinit:
 socketLB:
   hostNamespaceOnly: true
 
-# The direct API hostname comes from values/cilium-api.yaml.gotmpl at runtime.
+# The direct API hostname comes from api.yaml.gotmpl at runtime.
 kubeProxyReplacement: true
 k8sServicePort: 443
 routingMode: tunnel
 tunnelProtocol: vxlan
 
-# Enable after the Argo CD gateway-api Application has established its CRDs.
+# Bootstrap owns the shared CRDs; apps/platform installs the Envoy controller.
 gatewayAPI:
   enabled: false
   gatewayClass:
     create: "false"
-  enableAlpn: true
 
 hubble:
   enabled: true

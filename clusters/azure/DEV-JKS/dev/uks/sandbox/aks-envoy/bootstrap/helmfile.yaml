@@ -1,8 +1,10 @@
 repositories:
   - name: cilium
     url: https://helm.cilium.io
-  - name: argo
+  - name: argocd
     url: https://argoproj.github.io/argo-helm
+  - name: external-secrets
+    url: https://charts.external-secrets.io
 
 helmDefaults:
   createNamespace: true
@@ -10,15 +12,47 @@ helmDefaults:
   timeout: 600
 
 releases:
+  - name: gateway-api
+    namespace: kube-system
+    chart: oci://docker.io/envoyproxy/gateway-crds-helm
+    version: v1.9.2
+    values:
+      - crds:
+          gatewayAPI:
+            enabled: true
+            channel: standard
+          envoyGateway:
+            enabled: false
+
   - name: cilium
     namespace: kube-system
     chart: cilium/cilium
     version: "1.20.3"
-    # Gateway API CRDs are managed by Argo CD after bootstrap.
     disableValidationOnInstall: true
+    needs:
+      - kube-system/gateway-api
+    # Helm CRD installation completes before this readiness gate.
+    hooks:
+      - events: [presync]
+        showlogs: true
+        command: kubectl
+        args:
+          - wait
+          - --for=condition=Established
+          - --timeout=120s
+          - crd/gatewayclasses.gateway.networking.k8s.io
+          - crd/gateways.gateway.networking.k8s.io
+          - crd/httproutes.gateway.networking.k8s.io
+          - crd/grpcroutes.gateway.networking.k8s.io
+          - crd/referencegrants.gateway.networking.k8s.io
+          - crd/backendtlspolicies.gateway.networking.k8s.io
+          - crd/tlsroutes.gateway.networking.k8s.io
+          - crd/listenersets.gateway.networking.k8s.io
+          - crd/tcproutes.gateway.networking.k8s.io
+          - crd/udproutes.gateway.networking.k8s.io
     values:
-      - values/cilium.yaml
-      - values/cilium-api.yaml.gotmpl
+      - cilium/values.yaml
+      - cilium/api.yaml.gotmpl
 
   # Required before Cilium upgrades to check compatibility and pre-pull images:
   # https://docs.cilium.io/en/stable/operations/upgrade/#running-pre-flight-check-required
@@ -31,13 +65,7 @@ releases:
     chart: cilium/cilium
     version: "1.20.3"
     installed: false
-    values:
-      # Only share the API endpoint; main values would create duplicate Hubble,
-      # node-init, dashboard, and Gateway API resources in the preflight release.
-      - values/cilium-api.yaml.gotmpl
     set:
-      - name: aksbyocni.enabled
-        value: true
       - name: preflight.enabled
         value: true
       - name: agent
@@ -45,13 +73,59 @@ releases:
       - name: operator.enabled
         value: false
 
-  - name: argocd
-    namespace: argocd
-    chart: argo/argo-cd
-    version: "10.9.0"
-    # The first diff includes a root Application before Argo CD CRDs exist.
-    disableValidationOnInstall: true
+  - name: external-secrets
+    namespace: external-secrets
+    chart: external-secrets/external-secrets
+    version: "2.13.0"
     needs:
       - kube-system/cilium
     values:
-      - values/argocd.yaml
+      - ../../../../../../../../catalog/platform/external-secrets/values.yaml
+
+  - name: external-secrets-config
+    namespace: external-secrets
+    chart: ../../../../../../../../catalog/charts/azure/key-vault-secrets
+    # First-install diff runs before External Secrets CRDs exist.
+    disableValidationOnInstall: true
+    needs:
+      - external-secrets/external-secrets
+    values:
+      - external-secrets-config/values.yaml
+
+  - name: argocd
+    namespace: argocd
+    chart: argocd/argo-cd
+    version: "10.9.0"
+    needs:
+      - external-secrets/external-secrets-config
+    # Helm wait does not wait for ESO reconciliation. Block Argo CD on its inputs.
+    hooks:
+      - events: [presync]
+        showlogs: true
+        command: kubectl
+        args: [wait, --for=condition=Ready, clustersecretstore/platform-secrets, --timeout=120s]
+      - events: [presync]
+        showlogs: true
+        command: kubectl
+        args: [-n, argocd, wait, --for=condition=Ready, externalsecret/argocd-oidc, --timeout=120s]
+      - events: [presync]
+        showlogs: true
+        command: kubectl
+        args: [-n, argocd, get, secret, argocd-oidc, -o, name]
+    values:
+      - argocd/values.yaml
+
+  - name: argocd-config
+    namespace: argocd
+    chart: ../../../../../../../../catalog/charts/argocd
+    # First-install diff runs before Argo CD installs the Application CRD.
+    disableValidationOnInstall: true
+    needs:
+      - argocd/argocd
+    hooks:
+      - events: [presync]
+        showlogs: true
+        command: kubectl
+        args: [wait, --for=condition=Established, crd/applications.argoproj.io, --timeout=120s]
+    values:
+      - argocd-config/values.yaml

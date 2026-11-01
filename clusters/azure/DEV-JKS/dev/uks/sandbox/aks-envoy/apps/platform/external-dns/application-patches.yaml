@@ -1,0 +1,33 @@
+- op: add
+  path: /spec/sources/0/helm/valuesObject
+  value:
+    provider:
+      name: azure
+    sources:
+      - gateway-httproute
+    policy: upsert-only
+    registry: txt
+    txtPrefix: external-dns-
+    podLabels:
+      azure.workload.identity/use: "true"
+    extraVolumes:
+      - name: azure-config
+        configMap:
+          name: external-dns-azure
+    extraVolumeMounts:
+      - name: azure-config
+        mountPath: /etc/kubernetes
+        readOnly: true
+    serviceAccount:
+      create: true
+      # Must match the name in the UAMI federated credential subject:
+      # system:serviceaccount:external-dns:external-dns
+      name: external-dns
+      annotations:
+        azure.workload.identity/client-id: REPLACE_EXTERNAL_DNS_UAMI_CLIENT_ID
+        azure.workload.identity/tenant-id: bac158f2-9dfe-4f66-b3e8-7fed8227d08f
+    domainFilters:
+      - jkslabs.site
+    txtOwnerId: dev-uks-sandbox-aks-envoy
+    extraArgs:
+      - --azure-config-file=/etc/kubernetes/azure.json

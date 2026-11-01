@@ -1,0 +1,84 @@
+# Argo CD installation and configuration. The root Application has a separate Helm release
+# configured in ../argocd-config/values.yaml. No secret payloads belong in these values.
+crds:
+  install: true
+  keep: true
+server:
+  service:
+    type: ClusterIP
+  ingress:
+    enabled: false
+  serviceAccount:
+    # Created by external-secrets-config, not by the Argo CD chart.
+    create: false
+    # Must match the ServiceAccount name in the UAMI federated credential subject:
+    # system:serviceaccount:argocd:argocd-server
+    name: argocd-server
+  podLabels:
+    azure.workload.identity/use: "true"
+controller:
+  replicas: 1
+repoServer:
+  replicas: 1
+redis-ha:
+  enabled: false
+configs:
+  cm:
+    application.instanceLabelKey: argocd.argoproj.io/instance
+    timeout.reconciliation: 180s
+    resource.customizations.health.argoproj.io_Application: |
+      local health = {
+        status = "Progressing",
+        message = "Waiting for child Application to sync and become healthy"
+      }
+      if obj.status ~= nil then
+        if obj.status.health ~= nil then
+          health.message = obj.status.health.message or health.message
+          if obj.status.health.status == "Degraded" then
+            health.status = "Degraded"
+            health.message = obj.status.health.message or "Child Application is degraded"
+            return health
+          end
+          if obj.status.sync ~= nil and obj.status.sync.status == "Synced" then
+            health.status = obj.status.health.status or "Progressing"
+            health.message = obj.status.health.message or ""
+          end
+        end
+      end
+      return health
+    url: https://argocd.jkslabs.site
+    additionalUrls: |
+      - http://localhost:8080
+    # Helmfile waits for this Secret before installing or upgrading Argo CD.
+    # issuer and clientID resolve from the ESO-managed Secret at runtime.
+    oidc.config: |
+      name: Microsoft Entra ID
+      issuer: https://login.microsoftonline.com/bac158f2-9dfe-4f66-b3e8-7fed8227d08f/v2.0
+      clientID: $argocd-oidc:client-id
+      azure:
+        useWorkloadIdentity: true
+      requestedScopes:
+        - openid
+        - profile
+        - email
+      # Enable only for the group-based RBAC option below.
+      # requestedIDTokenClaims:
+      #   groups:
+      #     essential: true
+  params:
+    # Envoy terminates public HTTPS and forwards to the internal HTTP Service.
+    server.insecure: true
+  rbac:
+    policy.default: ""
+    policy.matchMode: glob
+    scopes: "[email]"
+    policy.csv: |
+      g, rjhelan@gmail.com, role:admin
+
+      p, role:apps-operator, projects, get, apps, allow
+      p, role:apps-operator, applications, get, apps/*, allow
+      p, role:apps-operator, applications, sync, apps/*, allow
+    # For group-based access, request the groups claim in oidc.config, replace
+    # scopes with "[groups]", and replace the email mapping with group mappings:
+    # g, <PLATFORM_ADMIN_GROUP_OBJECT_ID>, role:admin
+    # g, <APPS_GROUP_OBJECT_ID>, role:apps-operator
