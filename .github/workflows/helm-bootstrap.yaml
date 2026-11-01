@@ -17,7 +17,7 @@ env:
 
 jobs:
   plan:
-    name: Review Helmfile diff
+    name: Review bootstrap diffs
     runs-on: ubuntu-24.04
     environment: aks-envoy-plan
     timeout-minutes: 15
@@ -44,6 +44,19 @@ jobs:
           azure-subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           aks-resource-group: ${{ vars.AKS_RESOURCE_GROUP }}
           aks-cluster-name: ${{ vars.AKS_CLUSTER_NAME }}
+
+      - name: Check previous Gateway API owner
+        shell: bash
+        run: |
+          set -euo pipefail
+          application_crd=$(kubectl --request-timeout=30s get crd applications.argoproj.io --ignore-not-found -o name)
+          if [[ -n "$application_crd" ]]; then
+            previous_owner=$(kubectl --request-timeout=30s -n argocd get application gateway-api --ignore-not-found -o name)
+            if [[ -n "$previous_owner" ]]; then
+              echo "::error::Retire the old gateway-api Argo CD Application without deleting its CRDs before bootstrap takes ownership. See docs/helm-bootstrap.md."
+              exit 1
+            fi
+          fi
 
       - name: Diff bootstrap releases
         id: diff
@@ -89,7 +102,7 @@ jobs:
         run: rm -f "$RUNNER_TEMP/aks-envoy.kubeconfig"
 
   apply:
-    name: Apply approved Helmfile changes
+    name: Apply approved bootstrap changes
     needs: plan
     if: needs.plan.outputs.changes == 'true'
     runs-on: ubuntu-24.04
@@ -143,6 +156,9 @@ jobs:
           kubectl -n kube-system rollout status deployment/hubble-ui --timeout=600s
           kubectl -n argocd rollout status deployment/argocd-server --timeout=600s
           kubectl -n argocd rollout status deployment/argocd-repo-server --timeout=600s
+          kubectl -n external-secrets rollout status deployment/external-secrets --timeout=600s
+          kubectl -n external-secrets rollout status deployment/external-secrets-webhook --timeout=600s
+          kubectl -n external-secrets rollout status deployment/external-secrets-cert-controller --timeout=600s
 
       - name: Remove runner kubeconfig
         if: always()
