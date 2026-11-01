@@ -7,10 +7,23 @@ Create `SecretStore` to "mount" to keyvault and then `ExternalSecret` so it can 
 **`SecretStore` is usable within one namespace. `ClusterSecretStore` can be shared across namespaces.** Both describe how ESO connects and authenticates to Key Vault; neither contains the actual secret values.
 Docs: https://external-secrets.io/latest/api/secretstore/
 
-AKS Envoy uses Helmfile for operator and separate local configuration chart.
-See [configuration chart](../../../clusters/azure/DEV-JKS/dev/uks/sandbox/aks-envoy/bootstrap/external-secrets-config/README.md)
+AKS Envoy uses Helmfile for operator and shared Azure configuration chart.
+See [configuration chart](../../charts/azure/key-vault-secrets/README.md)
 for map-based ClusterSecretStores, reader ServiceAccounts, and ExternalSecrets.
 Keep catalog Argo CD Application unselected when Helmfile owns operator.
+
+## Shared operator values
+
+[`values.yaml`](values.yaml) contains provider-neutral operator settings, including
+ESO CRDs, ServiceAccount, webhook, and its certificate controller. Helmfiles can
+reference this file directly and add a cluster values file afterward only when
+an override is needed. AKS Envoy reads these values from the catalog; it keeps
+vault connections and remote secret references in its cluster configuration.
+
+`application.yaml` remains an alternative Argo CD-managed installation using the
+official chart defaults and its inline `installCRDs` setting. It does not consume
+this values file automatically. Do not select that Application when Helmfile
+owns the operator.
 
 |                       | `SecretStore`                                        | `ClusterSecretStore`                                                             |
 | --------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------- |
