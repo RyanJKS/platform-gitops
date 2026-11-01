@@ -43,9 +43,9 @@ infrastructure repository before using this sample. See the official
 Establish compatible Gateway API CRDs before enabling Cilium Gateway API.
 The [Gateway API Application](../gateway-api/README.md) pins `v1.6.3` for the
 Cilium `1.20.3` cluster example; review both versions together when upgrading.
-On a fresh cluster where Argo CD needs Cilium networking, bootstrap Cilium with
-`gatewayAPI.enabled: false` and `gatewayAPI.gatewayClass.create: "false"` first.
-After Argo CD establishes the CRDs, enable both settings through Helmfile.
+AKS Envoy declares Gateway API directly as a Helmfile release before Cilium and
+waits for Established CRDs. It enables Gateway API on the initial installation.
+Do not also select the catalog Gateway API Application for that cluster.
 The catalog profile enables them for clusters that already meet this prerequisite. See the official
 [Cilium Gateway API guide](https://docs.cilium.io/en/stable/network/servicemesh/gateway-api/gateway-api/).
 The chart creates the `cilium` GatewayClass. It does not create Gateways,
@@ -85,14 +85,14 @@ helmfile --file "$CLUSTER/bootstrap/helmfile.yaml" diff --suppress-secrets
 helmfile --interactive --file "$CLUSTER/bootstrap/helmfile.yaml" apply --suppress-secrets
 ```
 
-The AKS Envoy Helmfile installs Cilium `1.20.3` in `kube-system` with Gateway API
-disabled and waits before installing Argo CD. The root then selects the
-[Gateway API Application](../gateway-api/README.md). Follow the
-[bootstrap procedure](../../../docs/helm-bootstrap.md#enable-cilium-gateway-api)
-to enable Gateway API after the CRDs are established. Keep version upgrades in the
-cluster Helmfile;
-this catalog does not select a version or receive automatic cluster overrides.
-The catalog sample and cluster copy evolve independently.
+The AKS Envoy Helmfile installs Envoy Gateway's official `gateway-crds-helm`
+chart at `v1.9.2` first, enabling its standard Gateway API `v1.6.1` bundle. It then
+installs Cilium `1.20.3` in `kube-system` with its Gateway API controller disabled;
+the root selects Envoy Gateway for routing and does not manage shared CRDs.
+Follow the [bootstrap procedure](../../../docs/helm-bootstrap.md#verify-envoy-gateway-and-dns)
+for installation and verification. Keep chart pins in the cluster Helmfile;
+the Gateway API version follows the upstream CRD chart. This catalog receives no
+automatic cluster overrides. The catalog sample and cluster copy evolve independently.
 
 ## Verification
 

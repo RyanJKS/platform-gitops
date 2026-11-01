@@ -1,20 +1,16 @@
 # Argo CD catalog
 
-- `bootstrap/`: reusable root manifest templates and README; excluded from Kustomize.
-- `root_project.yaml`: GitOps-owned self-management AppProject at wave `-4`.
-- `application.yaml`: GitOps self-management child and runtime chart metadata.
-- `kustomization.yaml`: selects the project and self-management Application.
-- `values.yaml`: shared runtime Helm values.
-- `azure-values.yaml`: separate Azure AGIC runtime profile.
+- [`application.yaml`](application.yaml): controller Application for clusters that manage Argo CD through Argo CD.
+- [`kustomization.yaml`](kustomization.yaml): selects that controller Application.
+- [`configs/`](configs/README.md): provider and SSO examples.
+- [Root configuration chart](../../charts/argocd/README.md): reusable app-of-apps root, installed as a separate Helm release.
 
-Terraform installs a hardcoded chart with chart defaults and creates `all-apps`
-in `default`, supplying the cluster path and Git revision. It does not create
-the self-management project or read runtime values. The cluster root imports this
-catalog and creates the `bootstrap` project before its Argo CD child. Catalog
-templates contain no cluster paths.
+The controller Application and root chart serve different purposes. Importing
+this directory selects controller self-management; it does not install the root.
+AKS Envoy instead uses the official controller Helm chart plus the shared root
+chart in Helmfile. Cluster root source settings live in
+`bootstrap/argocd-config/values.yaml`; controller and SSO settings stay in
+`bootstrap/argocd/values.yaml`.
 
-The intended GitOps child uses the existing `bootstrap` project and applies shared,
-Azure, and cluster values after Helm ownership is relinquished. The cluster's
-automatic-sync gate remains disabled during that handoff.
-
-See [bootstrap and ownership handoff](../../../docs/bootstrap.md).
+Other clusters can use the controller Application and provider profiles after a
+reviewed ownership handoff. See [bootstrap ownership handoff](../../../docs/bootstrap.md).
