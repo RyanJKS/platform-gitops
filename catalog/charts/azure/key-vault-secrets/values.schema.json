@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "namespaces": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/namespace"
+      }
+    },
+    "serviceAccounts": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/serviceAccount"
+      }
+    },
+    "clusterSecretStores": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/clusterSecretStore"
+      }
+    },
+    "externalSecrets": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/secretResource"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "clusterSecretStore": {
+      "type": "object",
+      "required": [
+        "spec"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "spec": {
+          "type": "object",
+          "minProperties": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "serviceAccount": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "namespace": {
+          "type": "string",
+          "minLength": 1
+        },
+        "annotations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "automountServiceAccountToken": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "secretResource": {
+      "type": "object",
+      "required": [
+        "spec"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "namespace": {
+          "type": "string",
+          "minLength": 1
+        },
+        "spec": {
+          "type": "object",
+          "minProperties": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "namespace": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

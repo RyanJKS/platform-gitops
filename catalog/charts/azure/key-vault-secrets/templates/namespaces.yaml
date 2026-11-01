@@ -1,0 +1,13 @@
+{{- range $name, $namespace := .Values.namespaces }}
+{{- if ne $namespace.enabled false }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ $name | quote }}
+  labels:
+    {{- include "key-vault-secrets.labels" $ | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
+{{- end }}
+{{- end }}
