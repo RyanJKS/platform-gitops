@@ -24,9 +24,20 @@ patches:
           # system:serviceaccount:cert-manager:cert-manager
           name: cert-manager
           annotations:
-            azure.workload.identity/client-id: REPLACE_CERT_MANAGER_UAMI_CLIENT_ID
             azure.workload.identity/tenant-id: bac158f2-9dfe-4f66-b3e8-7fed8227d08f
       - op: add
         path: /spec/sources/0/helm/valuesObject/podLabels
         value:
           azure.workload.identity/use: "true"
+      - op: add
+        path: /spec/sources/0/helm/valuesObject/extraEnv
+        value:
+          - name: AZURE_CLIENT_ID
+            valueFrom:
+              secretKeyRef:
+                name: certmanager-client-id
+                key: client-id
+      - op: add
+        path: /spec/sources/0/helm/valuesObject/extraArgs
+        value:
+          - --cluster-issuer-ambient-credentials=true

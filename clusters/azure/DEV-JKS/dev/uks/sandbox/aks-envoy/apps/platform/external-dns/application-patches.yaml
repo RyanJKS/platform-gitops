@@ -10,6 +10,12 @@
     txtPrefix: external-dns-
     podLabels:
       azure.workload.identity/use: "true"
+    env:
+      - name: AZURE_CLIENT_ID
+        valueFrom:
+          secretKeyRef:
+            name: externaldns-client-id
+            key: client-id
     extraVolumes:
       - name: azure-config
         configMap:
@@ -24,7 +30,6 @@
       # system:serviceaccount:external-dns:external-dns
       name: external-dns
       annotations:
-        azure.workload.identity/client-id: REPLACE_EXTERNAL_DNS_UAMI_CLIENT_ID
         azure.workload.identity/tenant-id: bac158f2-9dfe-4f66-b3e8-7fed8227d08f
     domainFilters:
       - jkslabs.site
