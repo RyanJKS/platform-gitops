@@ -24,7 +24,7 @@ k8sServicePort: 443
 routingMode: tunnel
 tunnelProtocol: vxlan
 
-# Bootstrap owns the shared CRDs; apps/platform installs the Envoy controller.
+# apps/platform installs shared Gateway API CRDs and the Envoy controller.
 gatewayAPI:
   enabled: false
   gatewayClass:

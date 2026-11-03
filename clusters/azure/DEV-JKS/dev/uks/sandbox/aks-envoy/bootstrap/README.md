@@ -10,31 +10,35 @@ flowchart TD
     T["Terraform<br/>AKS BYOCNI, kube-proxy disabled<br/>OIDC, workload identity<br/>UAMIs, federation, Azure roles"]
 
     subgraph H["Helmfile"]
-        G["1. Gateway API<br/>10 CRDs, admission policy + binding"]
-        C["2. Cilium<br/>CNI, Service routing, Hubble"]
-        E["3. ESO<br/>Operator, webhook, cert controller"]
-        P["4. Platform secrets<br/>argocd namespace + argocd-server SA<br/>platform-secrets store + argocd-oidc Secret"]
-        A["5. Argo CD<br/>Controller, SSO, RBAC"]
-        R["6. Root Application<br/>Git URL, revision, apps/ path"]
-        G --> C --> E --> P --> A --> R
+        C["1. Cilium<br/>CNI, Service routing, Hubble"]
+        E["2. ESO<br/>Operator, webhook, cert controller"]
+        P["3. Platform secrets<br/>argocd, cert-manager, external-dns namespaces<br/>Vault connection, SSO and controller identity Secrets"]
+        A["4. Argo CD<br/>Controller, SSO, RBAC"]
+        R["5. Root Application<br/>Git URL, revision, apps/ path"]
+        C --> E --> P --> A --> R
     end
 
     subgraph GitOps["Argo CD: apps/platform/"]
-        F["AppProject, OCI repository<br/>ExternalDNS namespace + ConfigMap"]
-        M["7. cert-manager<br/>Controller, CRDs, workload identity"]
-        EG["8. Envoy Gateway<br/>Controller + extension CRDs"]
-        D["9. ExternalDNS<br/>Controller + workload identity"]
-        W["10. GatewayClass, Gateway<br/>DNS-01 ClusterIssuer, Certificate<br/>Argo CD HTTPRoutes"]
-        F --> M --> EG --> D --> W
+        N["Envoy Gateway namespace<br/>envoy-gateway-system<br/>Wave -6"]
+        F["AppProject, OCI repository<br/>ExternalDNS ConfigMap<br/>Wave -5"]
+        K["Gateway API CRDs<br/>Catalog Application, wave -4"]
+        M["cert-manager<br/>Controller, CRDs, workload identity<br/>Wave -4"]
+        EG["Envoy Gateway<br/>Controller + extension CRDs<br/>Wave -3"]
+        D["ExternalDNS<br/>Controller + workload identity<br/>Wave -2"]
+        W["GatewayClass, Gateway<br/>DNS-01 ClusterIssuer, Certificate<br/>Argo CD HTTPRoutes"]
+        N --> F
+        F --> K --> EG
+        F --> M --> EG
+        EG --> D --> W
     end
 
-    T --> G
+    T --> C
     V["Key Vault<br/>argocd-client-id"] -.-> P
-    R --> F
+    R --> N
     W --> HTTPS["Public load balancer<br/>DNS record + Argo CD HTTPS"]
 ```
 
-Numbers show installation order. Helmfile waits for the store and ExternalSecret
+Numbers show bootstrap installation order. Helmfile waits for the store and ExternalSecret
 `Ready`, then checks `argocd-oidc` exists before starting Argo CD. SSO reads
 `client-id` from that Secret; issuer stays in [argocd/values.yaml](argocd/values.yaml).
 
@@ -52,7 +56,8 @@ does not mean DNS, certificates, or child Applications have finished reconciling
   `https://argocd.jkslabs.site/auth/callback`. Both federations trust subject
   `system:serviceaccount:argocd:argocd-server`, the AKS OIDC issuer, and audience
   `api://AzureADTokenExchange`.
-- Fill dedicated ExternalDNS and cert-manager UAMI client IDs and DNS permissions.
+- Store dedicated ExternalDNS and cert-manager UAMI client IDs in Key Vault as
+  `externaldns-client-id` and `certmanager-client-id`, and configure DNS permissions.
   See [platform prerequisites](../apps/platform/README.md#terraform-inputs).
 
 Platform secrets creates `argocd-server`; Argo CD uses `serviceAccount.create: false`.
@@ -88,6 +93,19 @@ after switching clusters. Set hostname only, without `https://` or port; AKS use
 port `443`. [cilium/api.yaml.gotmpl](cilium/api.yaml.gotmpl) passes this variable
 into Cilium's `k8sServiceHost`. Missing variable stops Helmfile rendering.
 
+From this `bootstrap/` directory, use `helmfile diff --suppress-secrets` and
+`helmfile --interactive apply --suppress-secrets` after exporting the same API
+hostname. Omit the repository-relative `--file` argument in that directory.
+
+Gateway API CRDs are installed by the catalog Application after Argo CD starts,
+before Envoy Gateway. Cilium's Gateway API support stays disabled, so bootstrap
+has no dependency on these CRDs. The root applies CRDs directly with server-side
+apply, avoiding Helm's release Secret size limit. No packaging helper is needed.
+Before local bootstrap, run
+`bash .github/scripts/check-gateway-api-ownership.sh` from the repository root.
+Existing Helm owners require a reviewed migration; do not uninstall CRDs to
+transfer ownership. CI checks for existing Helm ownership in both jobs.
+
 Laptop kubeconfig authenticates Helmfile. Cilium pods do not inherit it. With
 kube-proxy disabled, Cilium needs the direct API endpoint before Service routing
 works. A successful `kubectl cluster-info` check does not supply that chart value.
@@ -112,14 +130,14 @@ the fresh target cluster needs working CNI before it can start.
 - [helmfile.yaml](helmfile.yaml): chart pins, release dependencies, readiness checks.
 - [cilium/values.yaml](cilium/values.yaml): CNI and Hubble; Cilium Gateway controller disabled.
 - [Shared ESO values](../../../../../../../../catalog/platform/external-secrets/values.yaml): generic operator settings.
-- [external-secrets-config/values.yaml](external-secrets-config/values.yaml): namespace, shared ServiceAccount, Key Vault store, ExternalSecret.
+- [external-secrets-config/values.yaml](external-secrets-config/values.yaml): target namespaces, shared ServiceAccount, Key Vault store, SSO and controller identity ExternalSecrets.
 - [argocd/values.yaml](argocd/values.yaml): installation, SSO, RBAC, internal HTTP Service.
 - [argocd-config/values.yaml](argocd-config/values.yaml): root source, selecting [apps/](../apps/kustomization.yaml).
 
-Helmfile owns these releases. Argo CD owns platform children and routing. Gateway
-API uses official Envoy chart `v1.9.2`, standard Gateway API bundle `v1.6.1`;
-Envoy's child installs only extension CRDs. Shared CRDs have no uninstall retention
-annotation. Cilium preflight stays disabled during initial installation.
+Helmfile owns these releases. Argo CD owns platform children, shared Gateway API
+CRDs, and routing. The Gateway API catalog Application selects seven standard
+CRDs at `v1.6.3`; Envoy's child installs only extension CRDs. Cilium preflight
+stays disabled during initial installation.
 
 Existing Helm or Terraform owners require an ownership handoff. Do not delete
 CRDs or ServiceAccounts to transfer ownership. See the

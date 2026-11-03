@@ -12,44 +12,11 @@ helmDefaults:
   timeout: 600
 
 releases:
-  - name: gateway-api
-    namespace: kube-system
-    chart: oci://docker.io/envoyproxy/gateway-crds-helm
-    version: v1.9.2
-    values:
-      - crds:
-          gatewayAPI:
-            enabled: true
-            channel: standard
-          envoyGateway:
-            enabled: false
-
   - name: cilium
     namespace: kube-system
     chart: cilium/cilium
     version: "1.20.3"
     disableValidationOnInstall: true
-    needs:
-      - kube-system/gateway-api
-    # Helm CRD installation completes before this readiness gate.
-    hooks:
-      - events: [presync]
-        showlogs: true
-        command: kubectl
-        args:
-          - wait
-          - --for=condition=Established
-          - --timeout=120s
-          - crd/gatewayclasses.gateway.networking.k8s.io
-          - crd/gateways.gateway.networking.k8s.io
-          - crd/httproutes.gateway.networking.k8s.io
-          - crd/grpcroutes.gateway.networking.k8s.io
-          - crd/referencegrants.gateway.networking.k8s.io
-          - crd/backendtlspolicies.gateway.networking.k8s.io
-          - crd/tlsroutes.gateway.networking.k8s.io
-          - crd/listenersets.gateway.networking.k8s.io
-          - crd/tcproutes.gateway.networking.k8s.io
-          - crd/udproutes.gateway.networking.k8s.io
     values:
       - cilium/values.yaml
       - cilium/api.yaml.gotmpl
