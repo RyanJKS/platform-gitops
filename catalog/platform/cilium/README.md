@@ -43,10 +43,10 @@ infrastructure repository before using this sample. See the official
 Establish compatible Gateway API CRDs before enabling Cilium Gateway API.
 The [Gateway API Application](../gateway-api/README.md) pins `v1.6.3` for the
 Cilium `1.20.3` cluster example; review both versions together when upgrading.
-AKS Envoy declares Gateway API directly as a Helmfile release before Cilium and
-waits for Established CRDs. It enables Gateway API on the initial installation.
-Do not also select the catalog Gateway API Application for that cluster.
-The catalog profile enables them for clusters that already meet this prerequisite. See the official
+AKS Envoy keeps Cilium's Gateway API support disabled and selects Envoy Gateway
+for routing. Cilium can start before shared Gateway API CRDs; the app-of-apps
+root installs those through the catalog Application before Envoy Gateway.
+The catalog profile enables Cilium Gateway API for clusters with established CRDs. See the official
 [Cilium Gateway API guide](https://docs.cilium.io/en/stable/network/servicemesh/gateway-api/gateway-api/).
 The chart creates the `cilium` GatewayClass. It does not create Gateways,
 HTTPRoutes, DNS records, or TLS certificates. Copy and adapt the routing samples
@@ -85,14 +85,13 @@ helmfile --file "$CLUSTER/bootstrap/helmfile.yaml" diff --suppress-secrets
 helmfile --interactive --file "$CLUSTER/bootstrap/helmfile.yaml" apply --suppress-secrets
 ```
 
-The AKS Envoy Helmfile installs Envoy Gateway's official `gateway-crds-helm`
-chart at `v1.9.2` first, enabling its standard Gateway API `v1.6.1` bundle. It then
-installs Cilium `1.20.3` in `kube-system` with its Gateway API controller disabled;
-the root selects Envoy Gateway for routing and does not manage shared CRDs.
-Follow the [bootstrap procedure](../../../docs/helm-bootstrap.md#verify-envoy-gateway-and-dns)
-for installation and verification. Keep chart pins in the cluster Helmfile;
-the Gateway API version follows the upstream CRD chart. This catalog receives no
-automatic cluster overrides. The catalog sample and cluster copy evolve independently.
+The AKS Envoy Helmfile installs Cilium `1.20.3` in `kube-system` with its Gateway
+API controller disabled. The root selects the catalog Gateway API Application
+and Envoy Gateway after bootstrap, so Cilium has no dependency on shared Gateway
+API CRDs. Keep Cilium's version, values, pod CIDR, and direct API endpoint in the
+cluster bootstrap. The Gateway API version follows its catalog Application.
+Cluster files do not inherit later catalog changes automatically. The catalog
+sample and cluster copy evolve independently.
 
 ## Verification
 

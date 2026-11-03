@@ -47,16 +47,17 @@ Separate Helm ownership from any workload-owned ExternalSecrets; never manage sa
 
 ## Platform vault connection
 
-AKS Envoy enables `namespaces.argocd`, `serviceAccounts.argocd-server`,
-`clusterSecretStores.platform-secrets`, and `externalSecrets.argocd-oidc`.
+AKS Envoy enables namespaces `argocd`, `cert-manager`, and `external-dns`, the
+`argocd-server` ServiceAccount, `platform-secrets` ClusterSecretStore, and three
+ExternalSecrets: `argocd-oidc`, `certmanager-client-id`, and `externaldns-client-id`.
 Configure the reader client ID, tenant ID, and vault URL before applying. Create
 Azure federation for subject
 `system:serviceaccount:argocd:argocd-server`, with the AKS OIDC issuer and
 audience `api://AzureADTokenExchange`, and grant the identity vault secret-read
 access. Terraform owns these Azure resources.
 
-This chart creates the `argocd` namespace, shared `argocd-server` ServiceAccount,
-and platform secrets before Argo CD is installed. Argo CD sets
+This chart creates those namespaces, the shared `argocd-server` ServiceAccount,
+and platform ExternalSecrets before Argo CD is installed. Argo CD sets
 `server.serviceAccount.create: false` and uses that account. The platform store
 references it for Key Vault access. The account name and namespace must match
 the UAMI federated credential subject `system:serviceaccount:argocd:argocd-server`;
@@ -67,13 +68,33 @@ The namespace has `helm.sh/resource-policy: keep` so removing the secrets releas
 does not delete the namespace containing Argo CD. If the namespace already
 exists outside this release, disable `namespaces.argocd` to avoid taking ownership.
 
-The store allows only `argocd` by default. Extend
-`clusterSecretStores.platform-secrets.spec.conditions` when needed.
-`argocd-oidc` maps remote keys `argocd-oidc-issuer` and `argocd-oidc-client-id`
-to `issuer` and `client-id` in a Secret labeled
-`app.kubernetes.io/part-of: argocd`. The issuer is the complete Entra issuer URL;
-the client ID is the SSO app registration GUID. Argo CD reads these keys through
-its OIDC Secret references. The UAMI annotations on this account select the
+The cluster currently omits `spec.conditions`, allowing ExternalSecrets in any
+namespace to reference this store subject to Kubernetes RBAC. Add namespace
+conditions if access must be restricted, including `argocd`, `cert-manager`, and
+`external-dns` for the current consumers. Declare new remote keys in this file's
+`externalSecrets` map and add a namespace entry if bootstrap must create it.
+Each Kubernetes Secret is local to its target namespace; exposing the same key
+elsewhere requires another target in that namespace.
+
+| ExternalSecret | Namespace | Target Secret key | Key Vault key |
+| --- | --- | --- | --- |
+| `argocd-oidc` | `argocd` | `client-id` | `argocd-client-id` |
+| `certmanager-client-id` | `cert-manager` | `client-id` | `certmanager-client-id` |
+| `externaldns-client-id` | `external-dns` | `client-id` | `externaldns-client-id` |
+
+The two controller target Secrets have the same names as their ExternalSecrets.
+The controller charts reference them through `AZURE_CLIENT_ID`; no additional
+identity manifests are needed under `apps/platform/`.
+
+If an earlier Argo CD selection already owns `cert-manager` or `external-dns`,
+review the namespace ownership transfer before applying this layout. Disable
+that namespace's bootstrap entry and retain the existing owner until migration
+is complete. Do not manage a namespace through both Helm and Argo CD.
+
+`argocd-oidc` maps remote key `argocd-client-id` to `client-id` in a Secret labeled
+`app.kubernetes.io/part-of: argocd`. The client ID is the SSO app registration GUID.
+The issuer stays in Argo CD's Helm values. Argo CD reads its client ID through
+an OIDC Secret reference. The UAMI annotations on this account select the
 identity used by ESO. The SSO app has its own federation for the same Kubernetes
 subject and can have a different client ID; Argo CD reads its SSO client ID from
 the Secret. Workload identity needs no client secret.

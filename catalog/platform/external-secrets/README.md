@@ -25,6 +25,33 @@ official chart defaults and its inline `installCRDs` setting. It does not consum
 this values file automatically. Do not select that Application when Helmfile
 owns the operator.
 
+## Central platform Secrets
+
+Declare shared vault connections and ExternalSecrets in the cluster's
+`bootstrap/external-secrets-config/values.yaml`. The reusable
+`catalog/charts/azure/key-vault-secrets` chart creates the selected namespaces
+and ExternalSecrets. No per-controller identity directory is required.
+
+AKS Envoy maps Key Vault key `certmanager-client-id` to a Secret of the same name
+in `cert-manager`, and `externaldns-client-id` to a Secret of the same name in
+`external-dns`. Both Secrets contain key `client-id`. Controllers consume them
+through `AZURE_CLIENT_ID` with a `secretKeyRef`, retaining the workload identity
+pod label and tenant annotation. The Azure webhook supplies the projected token
+and preserves the explicit environment variable. cert-manager's issuer uses
+ambient workload credentials instead of an explicit `managedIdentity.clientID`.
+
+Secret references are namespace-scoped. To expose another key to a workload,
+add an `externalSecrets` entry with its target namespace, Secret name, and key,
+then reference that Secret from the consumer in the same namespace. To expose
+the same value in multiple namespaces, declare a target in each namespace.
+The shared store must allow those namespaces and its reader needs access to the
+remote keys. Client IDs are public identifiers; this centralizes configuration
+without adding client secrets.
+
+Keep the bootstrap reader identity configured independently so ESO can establish
+the connection first. Restart consuming Pods after environment-backed Secrets
+change; existing environment variables do not refresh automatically.
+
 |                       | `SecretStore`                                        | `ClusterSecretStore`                                                             |
 | --------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------- |
 | Kubernetes scope      | Namespaced                                           | Cluster-wide                                                                     |

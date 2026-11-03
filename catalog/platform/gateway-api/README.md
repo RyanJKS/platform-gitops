@@ -1,7 +1,7 @@
 # Gateway API CRDs
 
-`application.yaml` lets Argo CD manage the seven Gateway API standard CRDs used
-by the Cilium profile. It reads upstream YAML directly from
+`application.yaml` lets Argo CD manage seven Gateway API standard CRDs for the
+Cilium and Envoy Gateway profiles. It reads upstream YAML directly from
 [`kubernetes-sigs/gateway-api` at `v1.6.3`](https://github.com/kubernetes-sigs/gateway-api/tree/v1.6.3/config/crd/standard).
 The source filter selects GatewayClass, Gateway, HTTPRoute, GRPCRoute,
 ReferenceGrant, BackendTLSPolicy, and TLSRoute definitions. It excludes other
@@ -56,21 +56,19 @@ Install or enable the controller's Gateway API support only after these CRDs are
 established. A parent needs Application health checks to wait between child waves;
 existing children still reconcile independently.
 
-AKS Envoy uses a different ownership model: its Helmfile references Envoy
-Gateway's official `gateway-crds-helm` OCI chart at `v1.9.2` directly, enabling
-its standard Gateway API `v1.6.1` bundle. The chart installs ten CRDs and the
-safe-upgrades admission policy and binding. Cilium depends on that release but
-leaves its Gateway API controller disabled. The root selects Envoy Gateway for
-routing and installs only its extension CRDs. Helm tracks shared schema upgrades;
-this upstream chart adds no uninstall retention annotation. Do not select this
-Application for that cluster. Its app-of-apps selection manages Gateway and
-HTTPRoute resources afterward. See the [bootstrap guide](../../../docs/helm-bootstrap.md).
+AKS Envoy selects this Application through its app-of-apps root at wave `-4`,
+before Envoy Gateway at `-3`. Cilium's Gateway API support remains disabled, so
+Cilium and Argo CD can start without these CRDs. The root's Application health
+check waits for the CRD child before advancing. Envoy Gateway's child installs
+only its own extension CRDs. This avoids storing shared CRD templates in a Helm
+release Secret and needs no chart packaging helper. See the
+[bootstrap guide](../../../docs/helm-bootstrap.md).
 
 ## Updating the CRDs
 
 Review the controller's compatibility requirements, upstream upgrade notes, and
 schema changes before changing `spec.source.targetRevision`. Review the directory
-filter at the new tag as well. When this Application is selected, Argo CD owns CRD upgrades. AKS Envoy instead
-declares and upgrades the CRD release in Helmfile;
-Helmfile also owns its Cilium and Argo CD releases. Never delete a CRD to resolve an upgrade error: deletion also
+filter at the new tag as well. When this Application is selected, Argo CD owns CRD upgrades. AKS Envoy uses
+that model while Helmfile owns its Cilium and Argo CD releases. Never delete a
+CRD to resolve an upgrade error: deletion also
 deletes its custom resources.

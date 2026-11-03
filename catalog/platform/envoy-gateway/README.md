@@ -32,8 +32,8 @@ provide the proxy's external address. See upstream
 
 Import the catalog directory into a cluster's Kustomization. Shared Gateway API
 CRDs must already exist. Select `catalog/platform/gateway-api` only when Argo CD
-owns those CRDs. AKS Envoy installs them through Helmfile and selects this
-controller through its root; it must not select the Gateway API Application.
+owns those CRDs. AKS Envoy selects both Applications through its root, with
+shared CRDs at wave `-4` before this controller at wave `-3`.
 Patch the Application's project, destination, and
 the values Git source revision (`spec.sources[2].targetRevision`) as needed. That
 revision must contain these catalog files before syncing. Controller overrides
