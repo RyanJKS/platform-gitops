@@ -1,4 +1,0 @@
-# Gateway API CRDs are provider-independent and need no Helm values.
-# The Application reads upstream YAML directly; this file is informational only.
-# Configure cloud identity, load balancers, and networking on the gateway controller.
-{}

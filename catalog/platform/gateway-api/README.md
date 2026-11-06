@@ -13,11 +13,9 @@ such as Cilium or Traefik separately.
 
 ## Provider configuration
 
-The CRDs are identical on Azure, AWS, GCP, and local clusters, so no
-`configs/<provider>/` directories are needed. `values.yaml` records this explicitly;
-it is informational and is not consumed by this raw-manifest Application.
-Configure cloud authentication, load balancer annotations, networking, and routing
-in the selected controller's cluster configuration.
+- Same CRDs on Azure, AWS, GCP, and local clusters.
+- Raw upstream manifests; no Helm values file or provider directory needed.
+- Configure cloud identity, load balancers, networking, and routing on gateway controller.
 
 ## Select in Argo CD
 

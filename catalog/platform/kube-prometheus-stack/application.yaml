@@ -4,26 +4,19 @@ metadata:
   name: kube-prometheus-stack
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "-1"
+    argocd.argoproj.io/sync-wave: '-1'
 spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: observability
   project: platform-apps
-  sources:
-    - repoURL: ghcr.io/prometheus-community/charts
-      chart: kube-prometheus-stack
-      targetRevision: 92.7.0
-      helm:
-        releaseName: kube-prometheus-stack
-        skipTests: true
-        valueFiles:
-          - $values/catalog/platform/kube-prometheus-stack/values.yaml
-
-    - repoURL: https://github.com/RyanJKS/platform-gitops.git
-      targetRevision: feature/monitoring
-      ref: values
-
   syncPolicy:
     syncOptions:
       - CreateNamespace=true
+  source:
+    repoURL: ghcr.io/prometheus-community/charts
+    chart: kube-prometheus-stack
+    targetRevision: 92.7.0
+    helm:
+      releaseName: kube-prometheus-stack
+      skipTests: true
