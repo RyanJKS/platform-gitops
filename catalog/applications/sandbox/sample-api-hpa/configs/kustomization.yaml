@@ -2,9 +2,9 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: sample-api # this injects into all files where the namespace should be
 resources:
-  - namespace
-  - ns-limit-range
-  - ns-resource-quotas
+  - namespace.yaml
+  - ns-limit-range.yaml
+  - ns-resource-quotas.yaml
   - deployment.yaml
   - deployment-hpa.yaml
   - service.yaml

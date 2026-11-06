@@ -1,7 +1,9 @@
-# Setup
+# Sample API with HPA
 
-Test load to app with the following:
+- Root selects `configs/`: namespace, LimitRange, ResourceQuota, Deployment, Service, and HPA.
+- Namespace: `sample-api`; HPA requires Metrics Server.
+- Review image, resources, and Service settings in `configs/`.
 
 ```sh
-kubectl run apache-bench --i --tty --rm --image=httpd -- ab -n 50000 -c 1000 http:<service-name>.<namespace-name>.svc.cluster.local/
+kubectl kustomize catalog/applications/sandbox/sample-api-hpa
 ```
