@@ -14,3 +14,7 @@ chart in Helmfile. Cluster root source settings live in
 
 Other clusters can use the controller Application and provider profiles after a
 reviewed ownership handoff. See [bootstrap ownership handoff](../../../docs/bootstrap.md).
+
+AKS AGIC keeps cluster settings in field-level JSON patches. Shared health checks
+and CRD settings stay in this catalog Application. Avoid replacing the entire
+`valuesObject` when overriding domain, ingress, SSO, RBAC, or replica counts.

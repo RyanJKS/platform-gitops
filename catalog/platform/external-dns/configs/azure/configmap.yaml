@@ -9,8 +9,8 @@ data:
   azure.json: |
     {
       "cloud": "AzurePublicCloud",
-      "tenantId": "REPLACE_PLACEHOLDER",
-      "subscriptionId": "REPLACE_PLACEHOLDER",
-      "resourceGroup": "REPLACE_PLACEHOLDER",
+      "tenantId": "__AZURE_TENANT_ID__",
+      "subscriptionId": "__AZURE_SUBSCRIPTION_ID__",
+      "resourceGroup": "__AZURE_DNS_RESOURCE_GROUP__",
       "useWorkloadIdentityExtension": true
     }

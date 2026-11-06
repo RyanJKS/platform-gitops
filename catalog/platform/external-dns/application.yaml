@@ -16,7 +16,7 @@ spec:
         skipTests: true
         valuesObject:
           provider:
-            name: REPLACE_PLACEHOLDER # Select provider values from configs/<cloud>/values.yaml
+            name: __DNS_PROVIDER__ # Copy provider settings from configs/<cloud>/values.yaml.
           sources:
             - ingress
           policy: upsert-only

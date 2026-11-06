@@ -1,0 +1,11 @@
+# Copy into the cluster Application's Helm valuesObject; merge with shared values.
+serviceAccount:
+  create: true
+  name: cert-manager
+  annotations:
+    azure.workload.identity/client-id: __AZURE_CLIENT_ID__
+    azure.workload.identity/tenant-id: __AZURE_TENANT_ID__
+podLabels:
+  azure.workload.identity/use: "true"
+extraArgs:
+  - --cluster-issuer-ambient-credentials=true
