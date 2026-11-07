@@ -21,10 +21,10 @@ flowchart TD
     subgraph GitOps["Argo CD: apps/platform/"]
         F["AppProject, OCI repository<br/>ExternalDNS ConfigMap<br/>Wave -5"]
         K["Gateway API CRDs<br/>Catalog Application, wave -4"]
-        M["cert-manager<br/>Controller, CRDs, workload identity<br/>Wave -4"]
+        M["cert-manager<br/>Controller, CRDs, workload identity<br/>Wave -3"]
         EG["Envoy Gateway<br/>Controller + extension CRDs<br/>Creates destination namespace<br/>Wave -3"]
         D["ExternalDNS<br/>Controller + workload identity<br/>Wave -2"]
-        W["GatewayClass, Gateway<br/>DNS-01 ClusterIssuer, Certificate<br/>Argo CD HTTPRoutes"]
+        W["GatewayClass, Gateway<br/>DNS-01 ClusterIssuer<br/>Argo CD HTTPRoutes"]
         F --> K --> EG
         F --> M --> EG
         EG --> D --> W
@@ -39,6 +39,11 @@ flowchart TD
 Numbers show bootstrap installation order. Helmfile waits for the store and ExternalSecret
 `Ready`, then checks `argocd-oidc` exists before starting Argo CD. SSO reads
 `client-id` from that Secret; issuer stays in [argocd/values.yaml](argocd/values.yaml).
+
+cert-manager starts after Gateway CRDs and generates Certificate `argocd-server-tls`
+from the annotated Gateway's HTTPS listener. Existing installations need the
+[Certificate handoff](../../../../../../../../docs/helm-bootstrap.md#gateway-certificate-handoff)
+before publishing this change; preserve the existing TLS Secret.
 
 Root health checks gate child Applications between sync waves. Helmfile completion
 does not mean DNS, certificates, or child Applications have finished reconciling.
@@ -129,7 +134,9 @@ the fresh target cluster needs working CNI before it can start.
 - [cilium/values.yaml](cilium/values.yaml): CNI and Hubble; Cilium Gateway controller disabled.
 - [Shared ESO values](../../../../../../../../catalog/platform/external-secrets/values.yaml): generic operator settings.
 - [external-secrets-config/values.yaml](external-secrets-config/values.yaml): target namespaces, shared ServiceAccount, Key Vault store, Argo CD OIDC ExternalSecret.
-- [argocd/values.yaml](argocd/values.yaml): installation, SSO, RBAC, internal HTTP Service.
+- [Shared Argo CD values](../../../../../../../../catalog/platform/argocd/values.yaml): generic defaults, health checks, CRDs, and default-deny RBAC.
+- [Azure copy templates](../../../../../../../../catalog/platform/argocd/configs/azure/README.md): AGIC and Entra examples, never loaded automatically.
+- [argocd/values.yaml](argocd/values.yaml): cluster installation, SSO, RBAC, and internal HTTP overrides, loaded after shared values.
 - [argocd-config/values.yaml](argocd-config/values.yaml): root source, selecting [apps/](../apps/kustomization.yaml).
 
 Helmfile owns these releases. Argo CD owns platform children, shared Gateway API
