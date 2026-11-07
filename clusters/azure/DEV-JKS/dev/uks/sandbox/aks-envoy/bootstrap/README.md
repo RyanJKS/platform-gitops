@@ -12,21 +12,19 @@ flowchart TD
     subgraph H["Helmfile"]
         C["1. Cilium<br/>CNI, Service routing, Hubble"]
         E["2. ESO<br/>Operator, webhook, cert controller"]
-        P["3. Platform secrets<br/>argocd, cert-manager, external-dns namespaces<br/>Vault connection, SSO and controller identity Secrets"]
+        P["3. Platform secrets<br/>argocd, cert-manager, external-dns namespaces<br/>Vault connection, Argo CD OIDC Secret"]
         A["4. Argo CD<br/>Controller, SSO, RBAC"]
         R["5. Root Application<br/>Git URL, revision, apps/ path"]
         C --> E --> P --> A --> R
     end
 
     subgraph GitOps["Argo CD: apps/platform/"]
-        N["Envoy Gateway namespace<br/>envoy-gateway-system<br/>Wave -6"]
         F["AppProject, OCI repository<br/>ExternalDNS ConfigMap<br/>Wave -5"]
         K["Gateway API CRDs<br/>Catalog Application, wave -4"]
         M["cert-manager<br/>Controller, CRDs, workload identity<br/>Wave -4"]
-        EG["Envoy Gateway<br/>Controller + extension CRDs<br/>Wave -3"]
+        EG["Envoy Gateway<br/>Controller + extension CRDs<br/>Creates destination namespace<br/>Wave -3"]
         D["ExternalDNS<br/>Controller + workload identity<br/>Wave -2"]
         W["GatewayClass, Gateway<br/>DNS-01 ClusterIssuer, Certificate<br/>Argo CD HTTPRoutes"]
-        N --> F
         F --> K --> EG
         F --> M --> EG
         EG --> D --> W
@@ -34,7 +32,7 @@ flowchart TD
 
     T --> C
     V["Key Vault<br/>argocd-client-id"] -.-> P
-    R --> N
+    R --> F
     W --> HTTPS["Public load balancer<br/>DNS record + Argo CD HTTPS"]
 ```
 
@@ -56,8 +54,8 @@ does not mean DNS, certificates, or child Applications have finished reconciling
   `https://argocd.jkslabs.site/auth/callback`. Both federations trust subject
   `system:serviceaccount:argocd:argocd-server`, the AKS OIDC issuer, and audience
   `api://AzureADTokenExchange`.
-- Store dedicated ExternalDNS and cert-manager UAMI client IDs in Key Vault as
-  `externaldns-client-id` and `certmanager-client-id`, and configure DNS permissions.
+- Set dedicated ExternalDNS and cert-manager UAMI client IDs in cluster
+  `apps/platform/<controller>/application.patch.yaml`; configure federation and DNS permissions.
   See [platform prerequisites](../apps/platform/README.md#terraform-inputs).
 
 Platform secrets creates `argocd-server`; Argo CD uses `serviceAccount.create: false`.
@@ -130,7 +128,7 @@ the fresh target cluster needs working CNI before it can start.
 - [helmfile.yaml](helmfile.yaml): chart pins, release dependencies, readiness checks.
 - [cilium/values.yaml](cilium/values.yaml): CNI and Hubble; Cilium Gateway controller disabled.
 - [Shared ESO values](../../../../../../../../catalog/platform/external-secrets/values.yaml): generic operator settings.
-- [external-secrets-config/values.yaml](external-secrets-config/values.yaml): target namespaces, shared ServiceAccount, Key Vault store, SSO and controller identity ExternalSecrets.
+- [external-secrets-config/values.yaml](external-secrets-config/values.yaml): target namespaces, shared ServiceAccount, Key Vault store, Argo CD OIDC ExternalSecret.
 - [argocd/values.yaml](argocd/values.yaml): installation, SSO, RBAC, internal HTTP Service.
 - [argocd-config/values.yaml](argocd-config/values.yaml): root source, selecting [apps/](../apps/kustomization.yaml).
 
