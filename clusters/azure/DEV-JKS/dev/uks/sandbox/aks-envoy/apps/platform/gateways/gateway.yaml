@@ -5,6 +5,7 @@ metadata:
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   gatewayClassName: envoy-gateway
   infrastructure:

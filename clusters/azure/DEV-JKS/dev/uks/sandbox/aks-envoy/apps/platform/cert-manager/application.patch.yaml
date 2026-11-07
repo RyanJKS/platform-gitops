@@ -1,4 +1,12 @@
 - op: add
+  # Gateway CRDs must exist before cert-manager discovers Gateway API support.
+  path: /metadata/annotations/argocd.argoproj.io~1sync-wave
+  value: "-3"
+- op: add
+  path: /spec/sources/0/helm/valuesObject/config
+  value:
+    enableGatewayAPI: true
+- op: add
   path: /spec/sources/0/helm/valuesObject/serviceAccount
   value:
     create: true
@@ -6,7 +14,7 @@
     # system:serviceaccount:cert-manager:cert-manager
     name: cert-manager
     annotations:
-      azure.workload.identity/client-id: __CERT_MANAGER_CLIENT_ID__
+      azure.workload.identity/client-id: 7338da4e-fcf5-47e0-a130-8ea43a5fbc43
       azure.workload.identity/tenant-id: bac158f2-9dfe-4f66-b3e8-7fed8227d08f
 - op: add
   path: /spec/sources/0/helm/valuesObject/podLabels

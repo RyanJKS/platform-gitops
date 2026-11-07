@@ -7,15 +7,15 @@
 - Patch the EnvoyProxy in the cluster overlay for Azure load balancer settings.
 - `gateways/` contains the cluster GatewayClass, Gateway, and ClientTrafficPolicy resources.
 - `gateways/clienttrafficpolicy.yaml` demonstrates client timeouts, TCP keepalive, and HTTP/2 settings; optional examples stay commented.
-- `argocd/` contains the Argo CD Certificate and HTTPRoutes.
+- `argocd/` contains Argo CD HTTPRoutes. The annotated Gateway requests its certificate automatically.
 
 | Root wave | Resources |
 | --- | --- |
 | `-5` | AppProject, OCI repository, ExternalDNS ConfigMap |
-| `-4` | Gateway API CRDs, cert-manager |
-| `-3` | Envoy Gateway |
+| `-4` | Gateway API CRDs |
+| `-3` | cert-manager, Envoy Gateway |
 | `-2` | ExternalDNS |
-| `0` | EnvoyProxy, GatewayClass, Gateway, ClientTrafficPolicy, ClusterIssuer, Certificate, HTTPRoutes |
+| `0` | EnvoyProxy, GatewayClass, Gateway, ClientTrafficPolicy, ClusterIssuer, HTTPRoutes |
 
 - Child health checks gate later waves; routing and certificates converge at wave `0`.
 - Bootstrap retains `argocd`, `cert-manager`, `external-dns`, `external-secrets`, and `kube-system` ownership.
@@ -45,7 +45,7 @@
 - Review existing record ownership before switching clusters.
 - cert-manager: production DNS-01; dedicated identity writes challenge TXT records.
 - HTTPS: `argocd.jkslabs.site` -> Gateway TLS -> `argocd-server:80`.
-- Certificate: `argocd-server`; TLS Secret: `argocd-server-tls`; HTTP redirects to HTTPS.
+- cert-manager generates Certificate `argocd-server-tls` from the annotated Gateway. TLS Secret: `argocd-server-tls`; HTTP redirects to HTTPS.
 - Listeners accept routes only from `argocd`. Argo CD CLI requires `--grpc-web`.
 - Argo CD SSO and ServiceAccount stay in bootstrap.
 - Keep root and Envoy values Git revisions aligned: currently `feature/monitoring`.
