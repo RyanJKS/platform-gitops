@@ -1,0 +1,93 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: gateway-configuration
+  namespace: envoy-gateway-system
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  logging:
+    level:
+      default: warn
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        # This scales the traffic proxies, not the Envoy Gateway controller.
+        replicas: 2
+        strategy:
+          type: RollingUpdate
+          rollingUpdate:
+            maxSurge: 1
+            maxUnavailable: 0
+        # Optional resource sizing. Tune these example values for the workload.
+        # container:
+        #   resources:
+        #     requests:
+        #       cpu: 100m
+        #       memory: 128Mi
+        #     limits:
+        #       memory: 512Mi
+        # Optional pod placement. Keep cluster-specific scheduling in overlays.
+        # pod:
+        #   nodeSelector:
+        #     kubernetes.io/os: linux
+      envoyService:
+        name: envoy-gateway-default
+        type: LoadBalancer
+        # Local preserves client source IPs; only nodes with local ready proxies serve traffic.
+        externalTrafficPolicy: Local
+      # Optional disruption protection. Use at least two replicas before enabling.
+      # envoyPDB:
+      #   minAvailable: 1
+      # Optional autoscaling. HPA overrides envoyDeployment.replicas.
+      # CPU utilization needs CPU requests above and a working metrics API.
+      # envoyHpa:
+      #   minReplicas: 2
+      #   maxReplicas: 5
+      #   metrics:
+      #     - type: Resource
+      #       resource:
+      #         name: cpu
+      #         target:
+      #           type: Utilization
+      #           averageUtilization: 70
+  telemetry:
+    accessLog:
+      disable: false
+      settings:
+        # Omit type to log routes and listener requests without a matching route.
+        - format:
+            type: JSON
+            json:
+              start_time: "%START_TIME%"
+              method: "%REQ(:METHOD)%"
+              authority: "%REQ(:AUTHORITY)%"
+              path: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
+              protocol: "%PROTOCOL%"
+              response_code: "%RESPONSE_CODE%"
+              response_flags: "%RESPONSE_FLAGS%"
+              duration_ms: "%DURATION%"
+              bytes_received: "%BYTES_RECEIVED%"
+              bytes_sent: "%BYTES_SENT%"
+              upstream_host: "%UPSTREAM_HOST%"
+              downstream_remote_address: "%DOWNSTREAM_REMOTE_ADDRESS%"
+              request_id: "%REQ(X-REQUEST-ID)%"
+          sinks:
+            # File sink writes to the proxy container's stdout, visible in kubectl logs.
+            - type: File
+              file:
+                path: /dev/stdout
+            # Optional additional sink. Deploy an OTLP gRPC collector first.
+            # This Service reference uses the EnvoyProxy namespace.
+            # - type: OpenTelemetry
+            #   openTelemetry:
+            #     backendRefs:
+            #       - group: ""
+            #         kind: Service
+            #         name: otel-collector
+            #         port: 4317
+    # Optional Prometheus endpoint. Configure scraping separately.
+    # metrics:
+    #   prometheus:
+    #     disable: false
