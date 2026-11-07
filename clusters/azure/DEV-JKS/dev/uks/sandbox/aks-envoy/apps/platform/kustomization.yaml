@@ -2,8 +2,9 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - platform-project.yaml
-  - gateway-api
+  - ../../../../../../../../../catalog/platform/gateway-api
   - cert-manager
   - envoy-gateway
+  - gateways
   - external-dns
   - argocd

@@ -51,6 +51,10 @@ spec:
     - group: gateway.networking.k8s.io
       kind: GatewayClass
   namespaceResourceWhitelist:
+    - group: gateway.envoyproxy.io
+      kind: ClientTrafficPolicy
+    - group: gateway.envoyproxy.io
+      kind: EnvoyProxy
     - group: ""
       kind: ServiceAccount
     - group: ""

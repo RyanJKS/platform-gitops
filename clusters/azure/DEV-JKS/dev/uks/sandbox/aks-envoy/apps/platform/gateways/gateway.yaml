@@ -7,6 +7,9 @@ metadata:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   gatewayClassName: envoy-gateway
+  infrastructure:
+    labels:
+      app: envoy-gateway
   listeners:
     - name: http
       protocol: HTTP

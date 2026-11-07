@@ -17,7 +17,7 @@ serviceAccounts:
     # Argo CD server needs Kubernetes API access as well as workload identity.
     automountServiceAccountToken: true
     annotations:
-      azure.workload.identity/client-id: 5b43368a-411b-4245-8c40-49e099835904
+      azure.workload.identity/client-id:
       azure.workload.identity/tenant-id: bac158f2-9dfe-4f66-b3e8-7fed8227d08f
 clusterSecretStores:
   platform-secrets:
@@ -26,7 +26,7 @@ clusterSecretStores:
       provider:
         azurekv:
           authType: WorkloadIdentity
-          vaultUrl: https://sandboxuksdevakv.vault.azure.net
+          vaultUrl: https://sandboxuksdevkv.vault.azure.net
           serviceAccountRef:
             # Must match serviceAccounts.argocd-server and the UAMI federation subject.
             name: argocd-server

@@ -1,0 +1,44 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: platform-gateway
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  # The policy and target Gateway must share a namespace.
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: platform-gateway
+      # Omit sectionName to cover all listeners. Use https for HTTPS-only settings.
+      # sectionName: https
+  timeout:
+    http:
+      # Close an HTTP connection with no active requests after one hour.
+      idleTimeout: 3600s
+      # Close a stream with no traffic in either direction after five minutes.
+      # These explicit values match the documented defaults.
+      streamIdleTimeout: 300s
+      # Optional header deadline. This is disabled by default.
+      # requestHeadersReceivedTimeout: 10s
+  # Enable socket-level probes to detect dead client TCP connections.
+  # These example values differ from the defaults used when keepalive is enabled.
+  tcpKeepalive:
+    idleTime: 60s
+    interval: 10s
+    probes: 3
+  http2:
+    # This is per connection, not a global request rate limit.
+    maxConcurrentStreams: 100
+  # Optional TLS protocol bounds. Select sectionName: https above before enabling.
+  # Certificates and TLS termination remain configured on the Gateway listener.
+  # tls:
+  #   minVersion: "1.2"
+  #   maxVersion: "1.3"
+  # Optional client IP detection behind exactly one trusted HTTP proxy.
+  # Leave disabled for the current direct Azure LoadBalancer path.
+  # Trusting forwarded headers from untrusted clients permits IP spoofing.
+  # clientIPDetection:
+  #   xForwardedFor:
+  #     numTrustedHops: 1

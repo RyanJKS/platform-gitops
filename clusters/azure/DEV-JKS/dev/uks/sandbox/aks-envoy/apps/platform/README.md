@@ -1,12 +1,21 @@
 # AKS Envoy platform applications
 
+- `kustomization.yaml` imports the shared Gateway API catalog directly.
+- `envoy-gateway/` selects the catalog controller installation and patches deployment settings.
+- The catalog includes the shared OCI repository registration.
+- The catalog EnvoyProxy defines shared proxy Service defaults; GatewayClass references it through `parametersRef`.
+- Patch the EnvoyProxy in the cluster overlay for Azure load balancer settings.
+- `gateways/` contains the cluster GatewayClass, Gateway, and ClientTrafficPolicy resources.
+- `gateways/clienttrafficpolicy.yaml` demonstrates client timeouts, TCP keepalive, and HTTP/2 settings; optional examples stay commented.
+- `argocd/` contains the Argo CD Certificate and HTTPRoutes.
+
 | Root wave | Resources |
 | --- | --- |
 | `-5` | AppProject, OCI repository, ExternalDNS ConfigMap |
 | `-4` | Gateway API CRDs, cert-manager |
 | `-3` | Envoy Gateway |
 | `-2` | ExternalDNS |
-| `0` | GatewayClass, Gateway, ClusterIssuer, Certificate, HTTPRoutes |
+| `0` | EnvoyProxy, GatewayClass, Gateway, ClientTrafficPolicy, ClusterIssuer, Certificate, HTTPRoutes |
 
 - Child health checks gate later waves; routing and certificates converge at wave `0`.
 - Bootstrap retains `argocd`, `cert-manager`, `external-dns`, `external-secrets`, and `kube-system` ownership.
