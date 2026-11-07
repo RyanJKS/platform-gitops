@@ -5,12 +5,12 @@ resources:
   - ../../../../../../../../../../catalog/platform/external-dns/configs/azure
 
 patches:
-  - path: configmap-patches.yaml
+  - path: configmap.patch.yaml
     target:
       version: v1
       kind: ConfigMap
       name: external-dns-azure
-  - path: application-patches.yaml
+  - path: application.patch.yaml
     target:
       group: argoproj.io
       version: v1alpha1

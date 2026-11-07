@@ -4,40 +4,15 @@ resources:
   - ../../../../../../../../../../catalog/platform/cert-manager
 
 patches:
-  - path: issuer-patches.yaml
+  - path: issuer.patch.yaml
     target:
       group: cert-manager.io
       version: v1
       kind: ClusterIssuer
       name: letsencrypt
-  - target:
+  - path: application.patch.yaml
+    target:
       group: argoproj.io
       version: v1alpha1
       kind: Application
       name: cert-manager
-    patch: |
-      - op: add
-        path: /spec/sources/0/helm/valuesObject/serviceAccount
-        value:
-          create: true
-          # Must match the name in the UAMI federated credential subject:
-          # system:serviceaccount:cert-manager:cert-manager
-          name: cert-manager
-          annotations:
-            azure.workload.identity/tenant-id: bac158f2-9dfe-4f66-b3e8-7fed8227d08f
-      - op: add
-        path: /spec/sources/0/helm/valuesObject/podLabels
-        value:
-          azure.workload.identity/use: "true"
-      - op: add
-        path: /spec/sources/0/helm/valuesObject/extraEnv
-        value:
-          - name: AZURE_CLIENT_ID
-            valueFrom:
-              secretKeyRef:
-                name: certmanager-client-id
-                key: client-id
-      - op: add
-        path: /spec/sources/0/helm/valuesObject/extraArgs
-        value:
-          - --cluster-issuer-ambient-credentials=true

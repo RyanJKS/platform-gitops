@@ -22,11 +22,10 @@ must be configured separately.
 - Fill the Key Vault identity and vault settings in
   `bootstrap/external-secrets-config/values.yaml`, and configure Entra SSO
   federation and the callback URI.
-- Create dedicated ExternalDNS and cert-manager UAMIs, federation, and DNS role
-  assignments. Store their client IDs in Key Vault as `externaldns-client-id` and
-  `certmanager-client-id`; `bootstrap/external-secrets-config/values.yaml`
-  declares their ExternalSecrets and target namespaces. Neither Envoy Gateway
-  nor the AKS control-plane UAMI needs application DNS roles in this setup.
+- Create dedicated ExternalDNS and cert-manager UAMIs, federation, and DNS roles.
+  Fill `__EXTERNAL_DNS_CLIENT_ID__` and `__CERT_MANAGER_CLIENT_ID__` in
+  `apps/platform/<controller>/application.patch.yaml` ServiceAccount annotations.
+  Envoy Gateway needs no workload UAMI; AKS control-plane identity handles network resources.
 - Review `jkslabs.site`, the Azure DNS resource group and subscription, and
   existing hostname ownership before syncing. cert-manager uses Azure DNS-01.
 

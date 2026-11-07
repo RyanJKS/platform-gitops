@@ -1,77 +1,52 @@
 # AKS Envoy platform applications
 
-The Helmfile root selects this directory after bootstrap. It creates the
-selected Envoy Gateway namespace at wave `-6` and the `platform-apps` AppProject at
-wave `-5`, then installs shared Gateway API CRDs and cert-manager at wave `-4`,
-Envoy Gateway at `-3`, and ExternalDNS at `-2`. GatewayClass, Gateway, ClusterIssuer, Certificate,
-and Argo CD HTTPRoutes reconcile after the controllers. Bootstrap releases remain
-owned by Helmfile. The Gateway API Application imports its catalog definition;
-Argo CD applies the seven selected upstream CRDs directly with server-side apply.
-The existing Application health check gates Envoy Gateway on child readiness.
-Gateway resources skip dry-run only while their CRDs are missing on first sync.
+| Root wave | Resources |
+| --- | --- |
+| `-5` | AppProject, OCI repository, ExternalDNS ConfigMap |
+| `-4` | Gateway API CRDs, cert-manager |
+| `-3` | Envoy Gateway |
+| `-2` | ExternalDNS |
+| `0` | GatewayClass, Gateway, ClusterIssuer, Certificate, HTTPRoutes |
 
-`namespaces/kustomization.yaml` selects reusable namespace bases from
-`catalog/platform/namespaces/` for Envoy Gateway. Add only namespaces needed by
-this root. Bootstrap retains ownership of `argocd`, `cert-manager`,
-`external-dns`, `external-secrets`, and resources in `kube-system`; do not add those
-namespaces to this selection. Child Applications retain `CreateNamespace=true`
-so they can also be selected without this namespace layer.
-
-ExternalDNS imports its Azure ConfigMap from the catalog and applies
-`external-dns/configmap-patches.yaml` for this cluster's Azure settings. The
-ConfigMap uses wave `-5`, after namespaces and before the controller Application.
-
-Both DNS controllers consume named Secrets created by the central
-[platform secrets configuration](../../bootstrap/external-secrets-config/values.yaml).
-The bootstrap release owns the ExternalSecrets and their target namespaces, so
-they exist before the root selects controllers. cert-manager reads
-`certmanager-client-id` in `cert-manager`; ExternalDNS reads
-`externaldns-client-id` in `external-dns`. Both use key `client-id` through
-`AZURE_CLIENT_ID`. Tenant and DNS resource settings remain in cluster overlays.
+- Child health checks gate later waves; routing and certificates converge at wave `0`.
+- Bootstrap retains `argocd`, `cert-manager`, `external-dns`, `external-secrets`, and `kube-system` ownership.
+- Envoy Application creates `envoy-gateway-system` during sync with `CreateNamespace=true`.
+- Patch files: `<resource>.patch.yaml`; `kustomization.yaml` selects targets.
+- Catalog holds reusable code; `configs/<cloud>/` holds provider examples; cluster files hold deployment values.
 
 ## Terraform inputs
 
-Provision two workload UAMIs with the AKS OIDC issuer and audience
-`api://AzureADTokenExchange`:
+| Controller | Client ID field | Federated subject |
+| --- | --- | --- |
+| cert-manager | [application.patch.yaml](cert-manager/application.patch.yaml): `__CERT_MANAGER_CLIENT_ID__` | `system:serviceaccount:cert-manager:cert-manager` |
+| ExternalDNS | [application.patch.yaml](external-dns/application.patch.yaml): `__EXTERNAL_DNS_CLIENT_ID__` | `system:serviceaccount:external-dns:external-dns` |
 
-- ExternalDNS: subject `system:serviceaccount:external-dns:external-dns`.
-  Store its client ID in Key Vault as `externaldns-client-id`.
-- cert-manager: subject `system:serviceaccount:cert-manager:cert-manager`.
-  Store its client ID in Key Vault as `certmanager-client-id`.
+- Replace both placeholders before sync. Client IDs belong in ServiceAccount annotations.
+- Federation: AKS OIDC issuer + audience `api://AzureADTokenExchange`.
+- Both UAMIs: **DNS Zone Contributor** on `jkslabs.site`.
+- ExternalDNS also needs **Reader** on DNS resource group.
+- Azure role assignments use principal IDs; annotations use client IDs.
+- After identity change: sync Application, verify annotation, restart controller Pods.
+- AKS control-plane identity handles load balancers and networking; Envoy Gateway needs no workload UAMI here.
 
-Both UAMIs need DNS Zone Contributor on the public `jkslabs.site` DNS zone.
-ExternalDNS also needs Reader on the DNS resource group for discovery. Assign
-roles to UAMI principal IDs; the ESO-managed Secrets contain client IDs. The
-`platform-secrets` reader needs secret-read access to both keys, and the store
-must allow both namespaces. After a client ID changes, restart its controller
-Deployment once the ExternalSecret has refreshed; container environment variables
-do not change automatically.
-The control-plane UAMI handles AKS infrastructure and network resources. Envoy
-Gateway needs no workload UAMI for this configuration.
+## DNS and HTTPS
 
-Review the DNS subscription, resource group, tenant, domain, and existing record
-ownership. ExternalDNS uses owner ID `dev-uks-sandbox-aks-envoy`; it does not take
-over records owned by another cluster. cert-manager uses production ACME DNS-01
-and writes challenge TXT records with its own identity.
+- Azure tenant, subscription, resource group: [configmap.patch.yaml](external-dns/configmap.patch.yaml).
+- ExternalDNS: `gateway-httproute`, `upsert-only`, owner `dev-uks-sandbox-aks-envoy`.
+- Review existing record ownership before switching clusters.
+- cert-manager: production DNS-01; dedicated identity writes challenge TXT records.
+- HTTPS: `argocd.jkslabs.site` -> Gateway TLS -> `argocd-server:80`.
+- Certificate: `argocd-server`; TLS Secret: `argocd-server-tls`; HTTP redirects to HTTPS.
+- Listeners accept routes only from `argocd`. Argo CD CLI requires `--grpc-web`.
+- Argo CD SSO and ServiceAccount stay in bootstrap.
+- Keep root and Envoy values Git revisions aligned: currently `feature/monitoring`.
 
-## Argo CD access
+## Verify
 
-The Gateway terminates HTTPS for `argocd.jkslabs.site` using Certificate
-`argocd-server`. HTTP redirects to HTTPS. The HTTPS route forwards to the internal
-`argocd-server:80` Service; bootstrap sets `server.insecure: true`. The
-ServiceAccount and SSO configuration remain in bootstrap. Use `--grpc-web` for
-the Argo CD CLI through this route.
-
-Both listeners accept routes only from `argocd`. Add namespace permissions and
-listener hostnames deliberately when extending the Gateway for other workloads.
-The Envoy Application's values revision matches the root's `feature/monitoring`;
-update both together when moving branches.
-
-Render from the repository root:
+From repository root:
 
 ```sh
 kubectl kustomize clusters/azure/DEV-JKS/dev/uks/sandbox/aks-envoy/apps
 ```
 
-See the [full deployment guide](../../../../../../../../../docs/helm-bootstrap.md#platform-applications-and-azure-identities)
-for the Terraform handoff, sync order, DNS-01 configuration, and verification.
+[Deployment guide](../../../../../../../../../docs/helm-bootstrap.md#platform-applications-and-azure-identities): Terraform handoff, sync order, runtime checks.
