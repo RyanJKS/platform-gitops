@@ -1,20 +1,26 @@
 # Argo CD catalog
 
-- [`application.yaml`](application.yaml): controller Application for clusters that manage Argo CD through Argo CD.
-- [`kustomization.yaml`](kustomization.yaml): selects that controller Application.
-- [`configs/`](configs/README.md): provider and SSO examples.
-- [Root configuration chart](../../charts/argocd/README.md): reusable app-of-apps root, installed as a separate Helm release.
+- [`application.yaml`](application.yaml): optional controller self-management Application.
+- [`values.yaml`](values.yaml): cloud-neutral defaults shared by the controller Application and Helmfile.
+- [`kustomization.yaml`](kustomization.yaml): selects the controller Application.
+- [`configs/`](configs/README.md): provider copy templates, never loaded automatically.
+- [Root configuration chart](../../charts/argocd/README.md): app-of-apps root, installed as a separate Helm release.
 
-The controller Application and root chart serve different purposes. Importing
-this directory selects controller self-management; it does not install the root.
-AKS Envoy instead uses the official controller Helm chart plus the shared root
-chart in Helmfile. Cluster root source settings live in
-`bootstrap/argocd-config/values.yaml`; controller and SSO settings stay in
-`bootstrap/argocd/values.yaml`.
+The controller Application and root chart serve different purposes. Importing this
+catalog directory selects controller self-management; it does not install the root.
+AKS Envoy keeps controller ownership in Helmfile. Its root source settings live in
+`bootstrap/argocd-config/values.yaml`. Helmfile loads the shared controller values
+first, then `bootstrap/argocd/values.yaml` for cluster overrides and SSO.
+Other clusters can use the controller Application after the reviewed
+[bootstrap ownership handoff](../../../docs/bootstrap.md).
 
-Other clusters can use the controller Application and provider profiles after a
-reviewed ownership handoff. See [bootstrap ownership handoff](../../../docs/bootstrap.md).
+The controller Application loads `values.yaml` through a values-only Git source.
+Its default revision is `main`; cluster patches must select the revision containing
+the shared file. AKS AGIC selects `dev/sandbox`, matching its root Application.
+Inline `valuesObject` contains only cluster overrides and takes precedence over
+the shared file. Helm merges nested maps, preserving shared health checks and CRDs.
 
-AKS AGIC keeps cluster settings in field-level JSON patches. Shared health checks
-and CRD settings stay in this catalog Application. Avoid replacing the entire
-`valuesObject` when overriding domain, ingress, SSO, RBAC, or replica counts.
+Keep Azure identity, Entra OIDC, and AGIC settings under
+[`configs/azure/`](configs/azure/README.md) as copy templates. Copy only the required
+fields into cluster overrides and replace placeholders. Both existing clusters
+override the catalog image tag with `""` to retain the pinned chart's `appVersion`.

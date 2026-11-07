@@ -80,6 +80,7 @@ releases:
         command: kubectl
         args: [-n, argocd, get, secret, argocd-oidc, -o, name]
     values:
+      - ../../../../../../../../catalog/platform/argocd/values.yaml
       - argocd/values.yaml
 
   - name: argocd-config
