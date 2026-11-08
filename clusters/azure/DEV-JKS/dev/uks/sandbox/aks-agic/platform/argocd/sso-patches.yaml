@@ -1,43 +1,38 @@
+# Azure SSO and cluster access settings; generic defaults come from the catalog.
 - op: add
-  path: /spec/sources/0/helm/valuesObject/configs/cm/url
-  value: https://argocd.jkslabs.site
-- op: add
-  path: /spec/sources/0/helm/valuesObject/configs/cm/additionalUrls
-  value: |
-    - http://localhost:8080
-- op: add
-  path: /spec/sources/0/helm/valuesObject/configs/cm/oidc.config
-  value: |
-    name: Microsoft Entra ID
-    issuer: https://login.microsoftonline.com/bac158f2-9dfe-4f66-b3e8-7fed8227d08f/v2.0
-    clientID: 400c5055-0819-48fc-867b-72e6c291c1f4
-    azure:
-      useWorkloadIdentity: true
-    requestedScopes:
-      - openid
-      - profile
-      - email
-
-    # below is only required for groups
-    # requestedIDTokenClaims:
-    #   groups:
-    #     essential: true
-    #
-- op: add
-  path: /spec/sources/0/helm/valuesObject/configs/params/server.insecure
-  value: true
-- op: add
-  path: /spec/sources/0/helm/valuesObject/configs/rbac
+  path: /spec/sources/0/helm/valuesObject/configs
   value:
-    policy.default: ''
-    policy.matchMode: glob
-    scopes: '[email]'
-    policy.csv: |
-      g, rjhelan@gmail.com, role:admin
+    cm:
+      url: https://argocd.jkslabs.site
+      additionalUrls: |
+        - http://localhost:8080
+      oidc.config: |
+        name: Microsoft Entra ID
+        issuer: https://login.microsoftonline.com/bac158f2-9dfe-4f66-b3e8-7fed8227d08f/v2.0
+        clientID: 400c5055-0819-48fc-867b-72e6c291c1f4
+        azure:
+          useWorkloadIdentity: true
+        requestedScopes:
+          - openid
+          - profile
+          - email
 
-      p, role:apps-operator, projects, get, apps, allow
-      p, role:apps-operator, applications, get, apps/*, allow
-      p, role:apps-operator, applications, sync, apps/*, allow
+        # below is only required for groups
+        # requestedIDTokenClaims:
+        #   groups:
+        #     essential: true
+        #
+    params:
+      server.insecure: true
+    rbac:
+      policy.matchMode: glob
+      scopes: '[email]'
+      policy.csv: |
+        g, rjhelan@gmail.com, role:admin
+
+        p, role:apps-operator, projects, get, apps, allow
+        p, role:apps-operator, applications, get, apps/*, allow
+        p, role:apps-operator, applications, sync, apps/*, allow
 - op: add
   path: /spec/sources/0/helm/valuesObject/server/serviceAccount
   value:

@@ -1,3 +1,5 @@
+# Cluster overrides merge over the catalog values file during Helm rendering.
+# Keep the values source on the same revision as the AGIC root Application.
 - op: add
   path: /spec/ignoreDifferences
   value:
@@ -11,54 +13,44 @@
   path: /spec/syncPolicy/syncOptions/-
   value: RespectIgnoreDifferences=true
 - op: add
-  path: /spec/sources/0/helm/valuesObject/global/domain
-  value: argocd.jkslabs.site
+  path: /spec/sources/1/targetRevision
+  value: dev/sandbox
 - op: add
-  # Preserve the pinned chart's appVersion instead of inheriting a runtime upgrade.
-  path: /spec/sources/0/helm/valuesObject/global/image/tag
-  value: ""
-- op: add
-  path: /spec/sources/0/helm/valuesObject/server/ingress
+  path: /spec/sources/0/helm/valuesObject
   value:
-    enabled: true
-    controller: generic
-    ingressClassName: azure-application-gateway
-    annotations:
-      acme.cert-manager.io/http01-edit-in-place: 'true'
-      appgw.ingress.kubernetes.io/backend-protocol: http
-      appgw.ingress.kubernetes.io/ssl-redirect: 'true'
-      cert-manager.io/cluster-issuer: letsencrypt-prod
-    tls: false
-    extraTls:
-      - hosts:
-          - argocd.jkslabs.site
-        secretName: argocd-ingress-tls
-- op: add
-  path: /spec/sources/0/helm/valuesObject/server/replicas
-  value: 3
-- op: add
-  path: /spec/sources/0/helm/valuesObject/controller
-  value:
-    replicas: 1
-    resources:
-      requests:
-        cpu: 250m
-        memory: 1Gi
-      limits:
-        memory: 2Gi
-- op: add
-  path: /spec/sources/0/helm/valuesObject/repoServer
-  value:
-    replicas: 2
-- op: add
-  path: /spec/sources/0/helm/valuesObject/redis-ha
-  value:
-    enabled: true
-- op: add
-  path: /spec/sources/0/helm/valuesObject/redis
-  value:
-    enabled: false
-- op: add
-  path: /spec/sources/0/helm/valuesObject/dex
-  value:
-    enabled: false
+    global:
+      domain: argocd.jkslabs.site
+      image:
+        # Preserve the pinned chart appVersion instead of the catalog runtime image.
+        tag: ''
+    server:
+      ingress:
+        enabled: true
+        controller: generic
+        ingressClassName: azure-application-gateway
+        annotations:
+          acme.cert-manager.io/http01-edit-in-place: 'true'
+          appgw.ingress.kubernetes.io/backend-protocol: http
+          appgw.ingress.kubernetes.io/ssl-redirect: 'true'
+          cert-manager.io/cluster-issuer: letsencrypt-prod
+        tls: false
+        extraTls:
+          - hosts:
+              - argocd.jkslabs.site
+            secretName: argocd-ingress-tls
+      replicas: 3
+    controller:
+      resources:
+        requests:
+          cpu: 250m
+          memory: 1Gi
+        limits:
+          memory: 2Gi
+    repoServer:
+      replicas: 2
+    redis-ha:
+      enabled: true
+    redis:
+      enabled: false
+    dex:
+      enabled: false
