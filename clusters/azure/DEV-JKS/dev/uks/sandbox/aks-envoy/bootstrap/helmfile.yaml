@@ -51,7 +51,7 @@ releases:
 
   - name: external-secrets-config
     namespace: external-secrets
-    chart: ../../../../../../../../catalog/charts/azure/key-vault-secrets
+    chart: ../../../../../../../../catalog/charts/external-secrets-store/azure
     # First-install diff runs before External Secrets CRDs exist.
     disableValidationOnInstall: true
     needs:
