@@ -24,7 +24,7 @@
       # system:serviceaccount:external-dns:external-dns
       name: external-dns
       annotations:
-        azure.workload.identity/client-id: 850165ac-b9dd-4686-9682-aaf62f682ded
+        azure.workload.identity/client-id: 1e98f32a-9482-4df5-873c-aee94d04dd6f
         azure.workload.identity/tenant-id: bac158f2-9dfe-4f66-b3e8-7fed8227d08f
     domainFilters:
       - jkslabs.site

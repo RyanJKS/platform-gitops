@@ -14,7 +14,7 @@
     # system:serviceaccount:cert-manager:cert-manager
     name: cert-manager
     annotations:
-      azure.workload.identity/client-id: 441857b2-40d0-4111-b4e7-51a40f22e57a
+      azure.workload.identity/client-id: c920436c-454e-49d0-aa2d-9ae414e5507e
       azure.workload.identity/tenant-id: bac158f2-9dfe-4f66-b3e8-7fed8227d08f
 - op: add
   path: /spec/sources/0/helm/valuesObject/podLabels

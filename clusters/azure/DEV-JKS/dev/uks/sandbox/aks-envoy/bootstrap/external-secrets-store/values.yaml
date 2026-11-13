@@ -17,7 +17,7 @@ serviceAccounts:
     # Argo CD server needs Kubernetes API access as well as workload identity.
     automountServiceAccountToken: true
     annotations:
-      azure.workload.identity/client-id: d3c17c37-2724-4a2d-8509-29f890c13d22
+      azure.workload.identity/client-id: 7d524fba-8118-4df3-9587-d1eec012ff22
       azure.workload.identity/tenant-id: bac158f2-9dfe-4f66-b3e8-7fed8227d08f
 clusterSecretStores:
   platform-secrets:
