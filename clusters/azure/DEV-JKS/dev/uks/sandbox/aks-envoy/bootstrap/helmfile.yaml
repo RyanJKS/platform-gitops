@@ -57,7 +57,7 @@ releases:
     needs:
       - external-secrets/external-secrets
     values:
-      - external-secrets-config/values.yaml
+      - external-secrets-store/values.yaml
 
   - name: argocd
     namespace: argocd

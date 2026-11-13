@@ -4,6 +4,8 @@ metadata:
   name: gateway-configuration
   namespace: envoy-gateway-system
   annotations:
+    # Create shared settings before GatewayClass parametersRef is reconciled.
+    argocd.argoproj.io/sync-wave: "-1"
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   logging:
