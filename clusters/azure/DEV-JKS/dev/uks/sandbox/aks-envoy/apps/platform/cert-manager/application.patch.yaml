@@ -24,3 +24,21 @@
   path: /spec/sources/0/helm/valuesObject/extraArgs
   value:
     - --cluster-issuer-ambient-credentials=true
+- op: add
+  # AKS injects these exact exclusions after each webhook apply.
+  # Keep other namespace selectors and all remaining webhook settings managed.
+  path: /spec/ignoreDifferences
+  value:
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      name: cert-manager-webhook
+      jqPathExpressions:
+        - >-
+          .webhooks[]?.namespaceSelector.matchExpressions[]? |
+          select(.key == "control-plane" and .operator == "NotIn" and .values == ["true"])
+        - >-
+          .webhooks[]?.namespaceSelector.matchExpressions[]? |
+          select(.key == "kubernetes.azure.com/managedby" and .operator == "NotIn" and .values == ["aks"])
+- op: add
+  path: /spec/syncPolicy/syncOptions/-
+  value: RespectIgnoreDifferences=true
