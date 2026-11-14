@@ -223,10 +223,12 @@ Root sync waves:
 - `-5`: OCI repository registration.
 - `-4`: shared Gateway API Application.
 - `-3`: Envoy Gateway Application; creates `envoy-gateway-system` and installs extension CRDs.
-- `0`: EnvoyProxy and cluster routing resources.
+- `-1`: EnvoyProxy shared settings.
+- `0`: GatewayClass and cluster routing resources.
 
 Parent Application health checks must wait for controller child to become
-synced and healthy before wave `0`. Existing children reconcile independently.
+synced and healthy before wave `-1`. EnvoyProxy must exist before GatewayClass
+references it at wave `0`. Existing children reconcile independently.
 EnvoyProxy uses `SkipDryRunOnMissingResource=true` while extension CRD is missing.
 Application enables automatic sync, self-healing, and server-side apply;
 automatic pruning stays disabled.
@@ -264,6 +266,9 @@ After selecting routing resources, check GatewayClass `Accepted`, Gateway
 `Accepted`/`Programmed`, and HTTPRoute `Accepted`/`ResolvedRefs` conditions.
 Confirm proxy Service has address. Test DNS, HTTP, and HTTPS. Rendering does
 not prove controller readiness or cloud load balancer access.
+
+For a missing EnvoyProxy or stale GatewayClass lookup error, see
+[invalid parametersRef recovery](../../../docs/debugging.md#envoy-gatewayclass-invalid-parametersref).
 
 Review upstream [installation guide](https://gateway.envoyproxy.io/docs/install/install-helm/)
 and [release notes](https://gateway.envoyproxy.io/news/releases/notes/v1.9.2/)

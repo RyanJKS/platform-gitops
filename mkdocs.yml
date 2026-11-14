@@ -5,6 +5,7 @@ nav:
 - Bootstrap: bootstrap.md
 - AKS Envoy Helm bootstrap: helm-bootstrap.md
 - Platform catalog: platform-catalog.md
+- Observability: observability.md
 - Debugging: debugging.md
 plugins:
 - techdocs-core

@@ -131,6 +131,54 @@ Reusable profiles, optional settings, and routing examples live under
 `catalog/platform/cilium/` with `__PLACEHOLDER__` markers. Copy and adapt these
 files; cluster bootstrap does not import the catalog profile automatically.
 
+## Local Helm plugins
+
+Helmfile `diff` and `apply` require the `helm-diff` plugin.
+`Error: unknown command "diff" for "helm"` means the selected Helm executable
+cannot find it. Install the CI-pinned version in Bash (Git Bash on Windows):
+
+```sh
+helm plugin install https://github.com/databus23/helm-diff --version v3.12.5
+helm plugin list
+helm diff version
+```
+
+Expect `diff` version `3.12.5`. Run these checks in the same terminal and user
+account as Helmfile. If the plugin is still missing, compare `helm env HELM_PLUGINS`
+between terminals. Then rerun the reviewed interactive apply from `bootstrap/`.
+See the [helm-diff plugin](https://github.com/databus23/helm-diff/tree/v3.12.5)
+for installation details.
+
+## Local AKS authentication
+
+Microsoft Entra-enabled AKS kubeconfigs call `kubelogin` to obtain credentials.
+`exec: executable kubelogin not found` means the local plugin is missing from
+PATH. Install it in the environment running kubectl and Helmfile.
+
+On Windows, run in PowerShell with Azure CLI and kubectl already installed:
+
+```powershell
+winget install --id Microsoft.Azure.Kubelogin --exact --source winget --scope user
+# Load the updated user PATH into this terminal.
+$env:Path = [Environment]::GetEnvironmentVariable('Path', 'User') + ';' + $env:Path
+kubelogin --version
+az login
+kubectl config current-context
+# Confirm this is the intended cluster before changing its login method.
+kubelogin convert-kubeconfig --login azurecli --context (kubectl config current-context)
+kubectl cluster-info --request-timeout=30s
+```
+
+Restart the IDE to pass the updated PATH to new integrated terminals. If the
+cluster context is absent, first run `az aks get-credentials --resource-group
+YOUR_AKS_RESOURCE_GROUP --name YOUR_AKS_CLUSTER_NAME`. An expired Azure CLI
+session requires `az login` again. Successful Azure login still requires the
+cluster permissions described above.
+
+For other operating systems, see [kubelogin installation](https://azure.github.io/kubelogin/install.html).
+See [AKS authentication](https://learn.microsoft.com/en-us/azure/aks/kubelogin-authentication)
+for supported login methods.
+
 ## Run and verify
 
 Commit and push the reviewed workflow and cluster configuration. GitHub must
@@ -160,12 +208,16 @@ The Helmfile pins Cilium `1.20.3` in `kube-system` and Argo CD chart `10.9.0` in
 changes before every run. Cluster-specific
 copies are independent of the examples under `catalog/platform/`.
 
-To render locally with Helm 3 and Helmfile installed, run from the repository root:
+To render locally with Helm 3 and Helmfile installed, run from the repository root
+in Bash (Git Bash on Windows). API hostname extraction uses Bash built-ins; no
+local Python installation is needed.
 
 ```sh
 CLUSTER=clusters/azure/DEV-JKS/dev/uks/sandbox/aks-envoy
-export CILIUM_K8S_SERVICE_HOST=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}' \
-  | python3 -c 'import sys; from urllib.parse import urlsplit; print(urlsplit(sys.stdin.read()).hostname or "")')
+api_server="$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')"
+CILIUM_K8S_SERVICE_HOST="${api_server#*://}"
+export CILIUM_K8S_SERVICE_HOST="${CILIUM_K8S_SERVICE_HOST%%[:/]*}"
+: "${CILIUM_K8S_SERVICE_HOST:?Missing API hostname in current kubeconfig}"
 helmfile --file "$CLUSTER/bootstrap/helmfile.yaml" template
 kubectl kustomize "$CLUSTER"
 ```
@@ -254,8 +306,10 @@ the intended AKS cluster. Do not run the bootstrap workflow during these steps.
 
    ```sh
    BOOTSTRAP=clusters/azure/DEV-JKS/dev/uks/sandbox/aks-envoy/bootstrap/helmfile.yaml
-   export CILIUM_K8S_SERVICE_HOST=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}' \
-     | python3 -c 'import sys; from urllib.parse import urlsplit; print(urlsplit(sys.stdin.read()).hostname or "")')
+   api_server="$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')"
+   CILIUM_K8S_SERVICE_HOST="${api_server#*://}"
+   export CILIUM_K8S_SERVICE_HOST="${CILIUM_K8S_SERVICE_HOST%%[:/]*}"
+   : "${CILIUM_K8S_SERVICE_HOST:?Missing API hostname in current kubeconfig}"
    helmfile --file "$BOOTSTRAP" --selector name=cilium-preflight diff --suppress-secrets
    helmfile --interactive --file "$BOOTSTRAP" --selector name=cilium-preflight apply --suppress-secrets
    kubectl -n kube-system rollout status daemonset/cilium-pre-flight-check --timeout=600s

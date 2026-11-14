@@ -25,6 +25,12 @@ The [Gateway](../gateways/gateway.yaml) selects `letsencrypt-prod` through its
 `argocd-server-tls` and its TLS Secret in namespace `argocd` from the HTTPS listener.
 No separate Certificate manifest is required.
 
+AKS adds namespace exclusions to `cert-manager-webhook`. The cluster Application
+ignores only `control-plane NotIn ["true"]` and
+`kubernetes.azure.com/managedby NotIn ["aks"]`, with
+`RespectIgnoreDifferences=true`. Other webhook settings remain managed. Without
+this rule, webhook drift keeps cert-manager `OutOfSync` and blocks later root waves.
+
 Existing installations need the [Certificate ownership handoff](../../../../../../../../../../docs/helm-bootstrap.md#gateway-certificate-handoff)
 before publishing the updated Gateway configuration. Keep the TLS Secret during handoff.
 

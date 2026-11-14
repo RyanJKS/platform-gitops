@@ -70,7 +70,14 @@ Azure credential display names do not need to match.
 ## Deploy locally
 
 Run from repository root. Install Helm 3, Helmfile, helm-diff, kubectl, Azure CLI,
-kubelogin, and Python 3. CI pins Helm `3.18.6` and Helmfile `1.1.7`.
+and kubelogin. CI pins Helm `3.18.6` and Helmfile `1.1.7`.
+
+Check `helm diff version` reports `3.12.5`. For `unknown command "diff" for "helm"`,
+follow [local Helm plugins](../../../../../../../../docs/helm-bootstrap.md#local-helm-plugins).
+
+For Windows installation, PATH refresh, and `executable kubelogin not found`
+recovery, follow [local AKS authentication](../../../../../../../../docs/helm-bootstrap.md#local-aks-authentication)
+before continuing. The deployment commands below use Bash.
 
 ```sh
 az login
@@ -79,10 +86,9 @@ kubelogin convert-kubeconfig --login azurecli
 kubectl config current-context
 kubectl cluster-info --request-timeout=30s
 
-export CILIUM_K8S_SERVICE_HOST="$(
-  kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}' |
-    python3 -c 'import sys; from urllib.parse import urlsplit; print(urlsplit(sys.stdin.read().strip()).hostname or "")'
-)"
+api_server="$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')"
+CILIUM_K8S_SERVICE_HOST="${api_server#*://}"
+export CILIUM_K8S_SERVICE_HOST="${CILIUM_K8S_SERVICE_HOST%%[:/]*}"
 : "${CILIUM_K8S_SERVICE_HOST:?Missing API hostname in current kubeconfig}"
 
 BOOTSTRAP=clusters/azure/DEV-JKS/dev/uks/sandbox/aks-envoy/bootstrap/helmfile.yaml

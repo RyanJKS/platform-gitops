@@ -15,9 +15,11 @@
 | `-4` | Gateway API CRDs |
 | `-3` | cert-manager, Envoy Gateway |
 | `-2` | ExternalDNS |
-| `0` | EnvoyProxy, GatewayClass, Gateway, ClientTrafficPolicy, ClusterIssuer, HTTPRoutes |
+| `-1` | EnvoyProxy |
+| `0` | GatewayClass, Gateway, ClientTrafficPolicy, ClusterIssuer, HTTPRoutes |
 
 - Child health checks gate later waves; routing and certificates converge at wave `0`.
+- EnvoyProxy applies before GatewayClass to avoid a missing `parametersRef` during first sync.
 - Bootstrap retains `argocd`, `cert-manager`, `external-dns`, `external-secrets`, and `kube-system` ownership.
 - Envoy Application creates `envoy-gateway-system` during sync with `CreateNamespace=true`.
 - Patch files: `<resource>.patch.yaml`; `kustomization.yaml` selects targets.
