@@ -1,0 +1,102 @@
+fullnameOverride: mimir
+
+# Development profile: ingest storage with one Kafka broker and no HA.
+global:
+  extraEnv:
+    - name: MINIO_ROOT_USER
+      valueFrom:
+        secretKeyRef:
+          name: mimir-minio
+          key: rootUser
+    - name: MINIO_ROOT_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: mimir-minio
+          key: rootPassword
+
+mimir:
+  structuredConfig:
+    multitenancy_enabled: false
+    usage_stats:
+      enabled: false
+    ingest_storage:
+      enabled: true
+      kafka:
+        auto_create_topic_default_partitions: 1
+    ingester:
+      ring:
+        replication_factor: 1
+    store_gateway:
+      sharding_ring:
+        replication_factor: 1
+    limits:
+      compactor_blocks_retention_period: 30d
+
+ingester:
+  replicas: 1
+  zoneAwareReplication:
+    enabled: false
+  persistentVolume:
+    enabled: true
+    size: 10Gi
+store_gateway:
+  replicas: 1
+  zoneAwareReplication:
+    enabled: false
+  persistentVolume:
+    enabled: true
+    size: 5Gi
+compactor:
+  replicas: 1
+  persistentVolume:
+    enabled: true
+    size: 10Gi
+distributor:
+  replicas: 1
+querier:
+  replicas: 1
+query_frontend:
+  replicas: 1
+query_scheduler:
+  replicas: 1
+
+# Prometheus and Alertmanager remain in kube-prometheus-stack.
+alertmanager:
+  enabled: false
+ruler:
+  enabled: false
+rollout_operator:
+  enabled: false
+
+gateway:
+  enabled: true
+  replicas: 1
+  service:
+    type: ClusterIP
+  ingress:
+    enabled: false
+
+kafka:
+  enabled: true
+  persistence:
+    enabled: true
+    size: 10Gi
+minio:
+  enabled: true
+  mode: standalone
+  # Pre-create this Secret with rootUser/rootPassword keys; never commit credentials.
+  # Name must match the chart's bucket Job volume and global.extraEnv references.
+  existingSecret: mimir-minio
+  rootUser: ${MINIO_ROOT_USER}
+  rootPassword: ${MINIO_ROOT_PASSWORD}
+  makeBucketJob:
+    annotations:
+      argocd.argoproj.io/hook: Sync
+      argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+  persistence:
+    enabled: true
+    size: 30Gi
+
+metaMonitoring:
+  serviceMonitor:
+    enabled: true
