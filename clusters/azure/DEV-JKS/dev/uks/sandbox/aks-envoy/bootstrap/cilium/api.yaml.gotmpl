@@ -1,0 +1,3 @@
+# Use the actual API endpoint from the selected AKS kubeconfig.
+k8sServiceHost: {{ requiredEnv "CILIUM_K8S_SERVICE_HOST" | quote }}
+k8sServicePort: 443

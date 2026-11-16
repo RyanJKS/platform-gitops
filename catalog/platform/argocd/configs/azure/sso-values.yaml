@@ -1,0 +1,37 @@
+# Reference only. Copy required fields into cluster Helm values or valuesObject.
+# Replace every placeholder before use. Do not load this file automatically.
+server:
+  serviceAccount:
+    create: true
+    name: argocd-server
+    annotations:
+      azure.workload.identity/client-id: "<ARGOCD_APP_CLIENT_ID>"
+      azure.workload.identity/tenant-id: "<TENANT_ID>"
+  podLabels:
+    azure.workload.identity/use: "true"
+configs:
+  cm:
+    url: https://argocd.example.com
+    oidc.config: |
+      name: Microsoft Entra ID
+      issuer: https://login.microsoftonline.com/<TENANT_ID>/v2.0
+      clientID: <ARGOCD_APP_CLIENT_ID>
+      azure:
+        useWorkloadIdentity: true
+      requestedScopes:
+        - openid
+        - profile
+        - email
+      requestedIDTokenClaims:
+        groups:
+          essential: true
+  rbac:
+    policy.matchMode: glob
+    scopes: "[groups]"
+    policy.csv: |
+      g, <PLATFORM_ADMIN_GROUP_OBJECT_ID>, role:admin
+
+      p, role:team-a, projects, get, team-a, allow
+      p, role:team-a, applications, get, team-a/*, allow
+      p, role:team-a, applications, sync, team-a/*, allow
+      g, <TEAM_A_GROUP_OBJECT_ID>, role:team-a

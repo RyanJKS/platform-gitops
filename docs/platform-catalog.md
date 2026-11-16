@@ -1,6 +1,26 @@
 # Select platform configuration
 
-`catalog/platform/<component>/` owns each reusable Application, chart pin, shared
+The catalog is a library of installable components and sample configuration.
+Copy the relevant examples into a cluster directory and adapt them there. An
+Argo CD Application is optional: the
+[Cilium catalog](https://github.com/RyanJKS/platform-gitops/blob/HEAD/catalog/platform/cilium/README.md)
+contains Helm values and documentation only. AKS Envoy keeps a separate copy and
+installs Cilium through its [Helm bootstrap workflow](helm-bootstrap.md).
+
+Gateway API CRDs use `catalog/platform/gateway-api/application.yaml`, which
+reads seven standard CRDs directly from upstream Gateway API `v1.6.3`. Import
+its catalog Kustomization into the cluster root and allow the upstream repository
+and cluster-scoped CustomResourceDefinitions in its AppProject. Argo CD owns CRD
+upgrades with server-side apply and automatic pruning disabled. The CRDs need no
+provider-specific configuration; `values.yaml` documents this and is not consumed
+by the raw-manifest Application. Cloud authentication and load balancer settings
+belong to the gateway controller's cluster configuration.
+
+AKS Envoy bootstraps Cilium with Gateway API disabled, then Argo CD installs the
+CRDs. Enable Cilium Gateway API through a reviewed Helmfile upgrade only after
+the CRDs are established. See [the bootstrap procedure](helm-bootstrap.md).
+
+For Argo CD-managed components, `catalog/platform/<component>/` owns each reusable Application, chart pin, shared
 values, provider files, and controller configuration. Cluster files select the
 components and supply identities, DNS settings, permissions, and sync policy.
 Catalog manifests must not reference paths under `clusters/`. Cluster overlays
@@ -158,9 +178,52 @@ Argo CD values merge in shared, Azure, then cluster order. Its cluster patch kee
 automatic sync disabled until ownership handoff. Validate root selection and
 child resources before syncing. Follow [bootstrap ownership handoff](bootstrap.md).
 
+## Envoy Gateway
+
+`catalog/platform/envoy-gateway/` provides an Argo CD Application for the official
+Envoy Gateway `v1.9.2` OCI charts, shared controller values, and an optional
+GatewayClass sample. Select it alongside the shared Gateway API Application.
+Argo CD installs Envoy Gateway's extension CRDs through `gateway-crds-helm` while
+Gateway API CRDs keep their existing owner. The controller chart's bundled CRDs
+stay disabled. The controller uses wave `-3`, after the shared CRDs at wave `-4`.
+
+The values are provider-independent. Configure cloud load balancers through
+cluster-owned EnvoyProxy resources and keep Gateways, routes, DNS, and TLS settings
+in cluster files. This is separate from Cilium's Envoy integration and is not
+selected automatically by the AKS Envoy bootstrap. See the
+[Envoy Gateway README](https://github.com/RyanJKS/platform-gitops/blob/HEAD/catalog/platform/envoy-gateway/README.md)
+for AppProject permissions, values overrides, CRD prerequisites, and verification.
+
+## Traefik templates
+
+Traefik offers separate Ingress and Gateway API values templates under
+`catalog/platform/traefik/configs/`. Copy one template's mapping into an inline
+cluster Kustomize patch that replaces `spec.sources[0].helm.valuesObject`.
+The catalog Application leaves that object empty for the cluster to fill.
+Traefik uses
+`__PLACEHOLDER__` markers; replace each marker according to its field before
+deployment. See [Traefik README](https://github.com/RyanJKS/platform-gitops/blob/HEAD/catalog/platform/traefik/README.md) for prerequisites, cluster
+overlay examples, TLS setup, and validation.
+
+## AKS DNS templates
+
+`catalog/platform/dns/` contains CoreDNS query logging, commented internal DNS
+examples, LocalDNS JSON, and a test pod. CoreDNS examples cover static hosts,
+Service aliases, namespace-preserving or default-namespace regex aliases, and
+private zone forwarding. Optional LocalDNS caches queries on each
+node; CoreDNS still handles cluster names. External DNS publishes cloud records.
+
+Copy templates into cluster configuration. Apply CoreDNS ConfigMap through
+Kubernetes; apply LocalDNS JSON through Azure node pool API. LocalDNS profile
+changes reimage nodes. Neither template installs automatically.
+
+See [DNS README](https://github.com/RyanJKS/platform-gitops/blob/HEAD/catalog/platform/dns/README.md)
+for prerequisites, commands, log access, and verification.
+
 ## Editable markers and verification
 
-Use `REPLACE_PLACEHOLDER` for every editable marker. The YAML field, shell variable,
+Use `REPLACE_PLACEHOLDER` for editable markers outside the Traefik and Cilium templates.
+Traefik and Cilium use `__PLACEHOLDER__`. The YAML field, shell variable,
 or surrounding instructions identify the required value. The provider patch appends its catalog values file. Fill remaining deployment inputs with their actual values.
 Do not replace all
 markers with one value: each field needs its own configuration. Unselected
@@ -170,6 +233,7 @@ remaining markers before deployment.
 ```sh
 kubectl kustomize clusters/azure/DEV-JKS/dev/uks/sandbox/aks-agic
 rg -n 'REPLACE_PLACEHOLDER' catalog clusters
+rg -n '__PLACEHOLDER__' catalog/platform/traefik catalog/platform/cilium clusters
 ```
 
 Rendering checks composition and paths. It does not prove cloud access, DNS, or

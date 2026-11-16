@@ -2,6 +2,15 @@ provider:
   name: azure
 podLabels:
   azure.workload.identity/use: "true"
+serviceAccount:
+  create: true
+  name: external-dns
+  annotations:
+    azure.workload.identity/client-id: __AZURE_CLIENT_ID__
+    azure.workload.identity/tenant-id: __AZURE_TENANT_ID__
+domainFilters:
+  - __DNS_ZONE__
+txtOwnerId: __TXT_OWNER_ID__
 extraArgs:
   - --azure-config-file=/etc/kubernetes/azure.json
 extraVolumes:

@@ -1,0 +1,47 @@
+ipam:
+  mode: kubernetes
+
+# Kubernetes service configuration
+k8sServiceHost: kind-cilium-lab-control-plane
+k8sServicePort: 6443
+
+# Cilium internal health / operational metrics
+prometheus:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+
+operator:
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+# Envoy proxy metrics
+envoy:
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+# Network flow observability
+hubble:
+  enabled: true
+
+  relay:
+    enabled: true
+
+  ui:
+    enabled: true
+
+  metrics:
+    enabled:
+      - dns
+      - drop
+      - tcp
+      - flow
+      - icmp
+      - port-distribution
+
+    serviceMonitor:
+      enabled: true

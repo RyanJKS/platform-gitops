@@ -1,0 +1,17 @@
+# This chart configures the root Application; the official argo-cd chart installs the controller.
+name: all-apps
+project: default
+source:
+  # Supply repository URL and path in the cluster values file.
+  repoURL: ""
+  targetRevision: HEAD
+  path: ""
+destination:
+  server: https://kubernetes.default.svc
+  namespace: argocd
+syncPolicy:
+  automated:
+    prune: false
+    selfHeal: true
+  syncOptions:
+    - ServerSideApply=true

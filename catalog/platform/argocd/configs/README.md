@@ -1,5 +1,10 @@
-# Configs
+# Provider configuration templates
 
-Values from the cloud/values.yaml should be copied/updated in the `clusters/<>/` patches.yaml file.
+Provider examples are copy templates, not automatic values layers. Cloud-neutral
+defaults live in [`../values.yaml`](../values.yaml).
 
-These files are not referenced anywhere but rather to be used as a template to copy and paste in the kustomization.yaml under the `valuesObject` for extra configs!
+Copy the required provider fields into a cluster Helm values file or an
+Application's `spec.sources[0].helm.valuesObject`. Replace placeholders and review
+resource ownership before deployment. Do not copy shared defaults or health checks.
+
+See [Azure templates](azure/README.md) for AGIC ingress and Entra workload identity SSO.

@@ -1,0 +1,5 @@
+apiVersion: v2
+name: key-vault-secrets
+description: Cluster secret stores, reader identities, and external secret references
+type: application
+version: 0.1.0

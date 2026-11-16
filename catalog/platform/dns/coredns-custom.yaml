@@ -1,0 +1,58 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns-custom
+  namespace: kube-system
+data:
+  log.override: |
+    log
+
+  # Optional examples: replace sample addresses/names, then uncomment selected keys.
+  # These documentation IPs are not reachable resolvers or application endpoints.
+
+  # Static internal records. Keep only one hosts plugin in the imported root block.
+  # fallthrough lets Kubernetes and upstream DNS resolve names absent here.
+  # internal-hosts.override: |
+  #   hosts {
+  #     192.0.2.10 registry.internal.example
+  #     192.0.2.20 database.internal.example
+  #     ttl 30
+  #     no_reverse
+  #     fallthrough
+  #   }
+
+  # Regex option A: preserve every label before .svc.cluster.local.
+  # Query api.apps.aks.com resolves api.apps.svc.cluster.local.
+  # answer name rewrites the response back to api.apps.aks.com.
+  # Choose A OR B for aks.com; both request patterns match the same suffix.
+  # internal-custom.override: |
+  #   rewrite stop {
+  #     name regex ^(.+)\.aks\.com\.$ {1}.svc.cluster.local.
+  #     answer name ^(.+)\.svc\.cluster\.local\.$ {1}.aks.com.
+  #   }
+
+  # Regex option B: expose Services from the default namespace without its label.
+  # Query api.aks.com resolves api.default.svc.cluster.local.
+  # answer name rewrites the response back to api.aks.com.
+  # Use this instead of option A. Neither option changes the cluster DNS domain.
+  # internal-default.override: |
+  #   rewrite stop {
+  #     name regex ^(.+)\.aks\.com\.$ {1}.default.svc.cluster.local.
+  #     answer name ^(.+)\.default\.svc\.cluster\.local\.$ {1}.aks.com.
+  #   }
+
+  # Internal alias for an existing Kubernetes Service; this does not create it.
+  # Exact rewrites also rewrite the response name to match the original query.
+  # service-alias.override: |
+  #   rewrite name exact api.internal.example api.apps.svc.cluster.local
+
+  # Forward a private zone to its resolver. .server creates a separate server block.
+  # The resolver must accept UDP/TCP 53 and must not forward this zone back here.
+  # Root log.override does not cover this block, so it includes its own log plugin.
+  # corporate.server: |
+  #   corp.example:53 {
+  #     errors
+  #     log
+  #     cache 30
+  #     forward . 192.0.2.53
+  #   }

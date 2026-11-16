@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: az-fileshare-pvc
+spec:
+  storageClassName: az-fileshare-sc # must match where you want to pull from!
+  accessMode:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi

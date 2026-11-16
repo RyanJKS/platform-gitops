@@ -52,25 +52,32 @@ README.md              Repository overview and quick start
 - Keep generated `site/` output out of source control. Do not edit generated HTML
   or Backstage's published documentation storage as a documentation fix.
 
-## Write for the reader
+## Write for quick lookup
 
-- Keep the README short: purpose, quick start, and a link to the documentation when
-  a real URL is known. Put detailed guides in `docs/` and avoid maintaining the same
-  procedure in two places.
-- Make `docs/index.md` explain what the project does and where readers should go
-  next. Organize navigation by reader tasks; add sections only when content merits
-  them, rather than generating empty pages.
-- For procedures, include prerequisites, exact commands, expected results, and
-  relevant failure recovery. Use repository-supported tooling and label the shell
-  or working directory when it matters. Never imply that an untested command ran.
-- For configuration, explain defaults, required values, and operational effects.
-  Use placeholders for secrets and identities, never actual credentials.
+- Use concise Caveman-style English for repository documentation, including
+  README files and `docs/`: short sentences, one idea per bullet, no filler.
+  Fragments are fine when clear. Preserve technical terms, negation, conditions,
+  exact paths, commands, values, and units. Clarity takes priority over brevity.
+- Keep README files focused on purpose, minimum quick start, required values,
+  common commands, and operational reminders. Include only sections that help
+  readers act. Link detailed guides in `docs/`; do not duplicate procedures.
+- Prefer bullets for facts, numbered steps for ordered procedures, and compact
+  tables for configuration, defaults, ownership, or comparisons. Use `->` for
+  short flows. Use Mermaid flow diagrams when relationships need a diagram and
+  the existing TechDocs renderer supports them; otherwise use a fenced text flow.
+  Do not add rendering dependencies just for a diagram.
+- Make the documentation home page point readers to tasks. Keep navigation
+  useful; do not create empty pages or sections to fill a template.
+- For procedures, retain prerequisites, exact commands, expected results, and
+  relevant failure recovery. Label the shell or working directory when needed.
+  Never imply an untested command ran. Keep warnings and complex steps explicit.
+- For configuration, show required values, defaults, and operational effects.
+  Use clear placeholders for identities and secrets, never actual credentials.
 - Ground architecture in implemented components, data flow, dependencies, and
-  tradeoffs. Distinguish current behavior from proposals. Add a diagram only when
-  it clarifies the design and renders with the existing MkDocs configuration.
-- Use descriptive headings, short paragraphs, fenced code blocks with language
-  labels, and meaningful link text. Explain unfamiliar terms on first use.
-  Prefer specific examples over marketing language or repeated summaries.
+  tradeoffs. Distinguish current behavior from proposals.
+- Use descriptive headings, meaningful link text, and fenced code blocks with
+  language labels. Explain unfamiliar terms briefly. Keep code and configuration
+  examples exact; compress explanations, not executable content.
 
 ## Verify and report
 

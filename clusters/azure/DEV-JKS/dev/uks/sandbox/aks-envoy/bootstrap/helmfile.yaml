@@ -1,0 +1,99 @@
+repositories:
+  - name: cilium
+    url: https://helm.cilium.io
+  - name: argocd
+    url: https://argoproj.github.io/argo-helm
+  - name: external-secrets
+    url: https://charts.external-secrets.io
+
+helmDefaults:
+  createNamespace: true
+  wait: true
+  timeout: 600
+
+releases:
+  - name: cilium
+    namespace: kube-system
+    chart: cilium/cilium
+    version: "1.20.3"
+    disableValidationOnInstall: true
+    values:
+      - cilium/values.yaml
+      - cilium/api.yaml.gotmpl
+
+  # Required before Cilium upgrades to check compatibility and pre-pull images:
+  # https://docs.cilium.io/en/stable/operations/upgrade/#running-pre-flight-check-required
+  # Set the target version here first; leave the installed Cilium version unchanged.
+  # Enable and diff ONLY this release with --selector name=cilium-preflight.
+  # Review, then use --interactive apply. After checks pass, disable it and repeat.
+  # Then update the main Cilium version. See docs/helm-bootstrap.md for the sequence.
+  - name: cilium-preflight
+    namespace: kube-system
+    chart: cilium/cilium
+    version: "1.20.3"
+    installed: false
+    set:
+      - name: preflight.enabled
+        value: true
+      - name: agent
+        value: false
+      - name: operator.enabled
+        value: false
+
+  - name: external-secrets
+    namespace: external-secrets
+    chart: external-secrets/external-secrets
+    version: "2.13.0"
+    needs:
+      - kube-system/cilium
+    values:
+      - ../../../../../../../../catalog/platform/external-secrets/values.yaml
+
+  - name: external-secrets-store
+    namespace: external-secrets
+    chart: ../../../../../../../../catalog/charts/external-secrets-store/azure
+    # First-install diff runs before External Secrets CRDs exist.
+    disableValidationOnInstall: true
+    needs:
+      - external-secrets/external-secrets
+    values:
+      - external-secrets-store/values.yaml
+
+  - name: argocd
+    namespace: argocd
+    chart: argocd/argo-cd
+    version: "10.9.0"
+    needs:
+      - external-secrets/external-secrets-store
+    # Helm wait does not wait for ESO reconciliation. Block Argo CD on its inputs.
+    hooks:
+      - events: [presync]
+        showlogs: true
+        command: kubectl
+        args: [wait, --for=condition=Ready, clustersecretstore/platform-secrets, --timeout=120s]
+      - events: [presync]
+        showlogs: true
+        command: kubectl
+        args: [-n, argocd, wait, --for=condition=Ready, externalsecret/argocd-oidc, --timeout=120s]
+      - events: [presync]
+        showlogs: true
+        command: kubectl
+        args: [-n, argocd, get, secret, argocd-oidc, -o, name]
+    values:
+      - ../../../../../../../../catalog/platform/argocd/values.yaml
+      - argocd/values.yaml
+
+  - name: argocd-config
+    namespace: argocd
+    chart: ../../../../../../../../catalog/charts/argocd
+    # First-install diff runs before Argo CD installs the Application CRD.
+    disableValidationOnInstall: true
+    needs:
+      - argocd/argocd
+    hooks:
+      - events: [presync]
+        showlogs: true
+        command: kubectl
+        args: [wait, --for=condition=Established, crd/applications.argoproj.io, --timeout=120s]
+    values:
+      - argocd-config/values.yaml

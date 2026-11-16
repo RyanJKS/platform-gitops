@@ -1,0 +1,145 @@
+fullnameOverride: alloy
+crds:
+  create: false
+controller:
+  type: daemonset
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule
+    - key: node-role.kubernetes.io/master
+      operator: Exists
+      effect: NoSchedule
+alloy:
+  enableReporting: false
+  extraEnv:
+    - name: HOST_NODE_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: spec.nodeName
+  extraPorts:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+      protocol: TCP
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+      protocol: TCP
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+  configMap:
+    content: |
+      logging {
+        level  = "info"
+        format = "logfmt"
+      }
+
+      discovery.kubernetes "pods" {
+        role = "pod"
+        selectors {
+          role  = "pod"
+          field = "spec.nodeName=" + sys.env("HOST_NODE_NAME")
+        }
+      }
+
+      discovery.relabel "pod_logs" {
+        targets = discovery.kubernetes.pods.targets
+        rule {
+          source_labels = ["__meta_kubernetes_pod_phase"]
+          regex         = "Running"
+          action        = "keep"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_namespace"]
+          target_label  = "namespace"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_name"]
+          target_label  = "pod"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_name"]
+          target_label  = "container"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_node_name"]
+          target_label  = "node"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+          target_label  = "app"
+        }
+        rule {
+          source_labels = ["namespace", "container"]
+          separator     = "/"
+          target_label  = "job"
+        }
+      }
+
+      loki.source.kubernetes "pod_logs" {
+        targets    = discovery.relabel.pod_logs.output
+        forward_to = [loki.write.default.receiver]
+      }
+
+      loki.write "default" {
+        endpoint {
+          url = "http://loki.observability.svc.cluster.local:3100/loki/api/v1/push"
+        }
+      }
+
+      otelcol.receiver.otlp "default" {
+        grpc {
+          endpoint = "0.0.0.0:4317"
+        }
+        http {
+          endpoint = "0.0.0.0:4318"
+        }
+        output {
+          traces = [otelcol.processor.memory_limiter.traces.input]
+        }
+      }
+
+      otelcol.processor.memory_limiter "traces" {
+        check_interval = "1s"
+        limit          = "384MiB"
+        spike_limit    = "96MiB"
+        output {
+          traces = [otelcol.processor.batch.traces.input]
+        }
+      }
+
+      otelcol.processor.batch "traces" {
+        timeout         = "5s"
+        send_batch_size = 512
+        output {
+          traces = [otelcol.exporter.otlp.tempo.input]
+        }
+      }
+
+      otelcol.exporter.otlp "tempo" {
+        client {
+          endpoint = "tempo.observability.svc.cluster.local:4317"
+          tls {
+            insecure = true
+          }
+        }
+      }
+
+# API-based log collection needs no privileged container or host filesystem mount.
+rbac:
+  create: true
+  rules:
+    - apiGroups: [""]
+      resources: [pods, pods/log]
+      verbs: [get, list, watch]
+  clusterRules:
+    - apiGroups: [""]
+      resources: [namespaces]
+      verbs: [get, list, watch]
+serviceMonitor:
+  enabled: true

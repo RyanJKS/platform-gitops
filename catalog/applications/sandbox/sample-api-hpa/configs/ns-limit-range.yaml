@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: sample-api-ns-limit-range
+  namespace: sample-api # could be omitted since kustomization would be injecting all the metadata
+spec:
+  limits:
+    - type: "Pod"
+      max:
+        cpu: "2"
+        memory: "1Gi"
+      min:
+        cpu: "200m"
+        memory: "6Mi"
+    - type: "Container"
+      max:
+        cpu: "2"
+        memory: "1Gi"
+      min:
+        cpu: "100m"
+        memory: "4Mi"
+      default:
+        cpu: "300m"
+        memory: "200Mi"
+      defaultRequest:
+        cpu: "200m"
+        memory: "100Mi"
+      maxLimitRequestRatio:
+        cpu: "10"

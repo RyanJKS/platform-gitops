@@ -1,0 +1,88 @@
+# Template Configs
+#
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: __NAMESPACE__
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: eso-keyvault-reader
+  namespace: __NAMESPACE__
+  annotations:
+    azure.workload.identity/client-id: "__ESO_CLIENT_ID__"
+    azure.workload.identity/tenant-id: "__TENANT_ID__"
+---
+apiVersion: external-secrets.io/v1
+kind: SecretStore
+metadata:
+  name: azure-keyvault
+  namespace: __NAMESPACE__
+spec:
+  provider:
+    azurekv:
+      authType: WorkloadIdentity
+      vaultUrl: "https://__VAULT_NAME__.vault.azure.net"
+      serviceAccountRef:
+        name: eso-keyvault-reader
+
+---
+## external-secrets
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: eso-database-credentials
+  namespace: __NAMESPACE__
+spec:
+  refreshInterval: 1m
+  secretStoreRef:
+    name: azure-keyvault
+    kind: SecretStore
+  target:
+    name: eso-database-credentials
+    creationPolicy: Owner
+  data:
+    - secretKey: DB_PASSWORD
+      remoteRef:
+        key: database-password
+---
+## In app/deployment call
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eso-demo
+  namespace: __NAMESPACE__
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: eso-demo
+  template:
+    metadata:
+      labels:
+        app: eso-demo
+    spec:
+      # This application only reads a Kubernetes Secret. It does not need
+      # Azure Workload Identity or the eso-keyvault-reader ServiceAccount.
+      nodeSelector:
+        kubernetes.io/os: linux
+      containers:
+        - name: demo
+          image: busybox:1.37.0
+          command: ["sh", "-c"]
+          args:
+            - 'test -n "$DB_PASSWORD" && echo "Secret injected successfully" && sleep 86400'
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: eso-database-credentials
+                  key: DB_PASSWORD
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi

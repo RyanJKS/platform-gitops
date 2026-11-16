@@ -1,0 +1,21 @@
+# Copy into the cluster overlay; target ClusterIssuer/letsencrypt.
+- op: replace
+  path: /metadata/name
+  value: letsencrypt-prod
+- op: replace
+  path: /metadata/annotations/argocd.argoproj.io~1sync-wave
+  value: "0"
+- op: replace
+  path: /spec/acme
+  value:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: __ACME_EMAIL__
+    privateKeySecretRef:
+      name: letsencrypt-prod-account-key
+    solvers:
+      - dns01:
+          azureDNS:
+            subscriptionID: __AZURE_SUBSCRIPTION_ID__
+            resourceGroupName: __AZURE_DNS_RESOURCE_GROUP__
+            hostedZoneName: __DNS_ZONE__
+            environment: AzurePublicCloud

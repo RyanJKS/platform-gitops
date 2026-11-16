@@ -49,6 +49,31 @@ kubectl -n argocd get applications \
 kubectl get pods -A
 ```
 
+## Envoy GatewayClass invalid parametersRef
+
+**Problem:** GatewayClass reports `Invalid parametersRef` because EnvoyProxy
+`envoy-gateway-system/gateway-configuration` was not found.
+
+**Solution:** Sync `all-apps`, which owns the EnvoyProxy. The `envoy-gateway` child
+installs the controller and extension CRDs. Confirm the class references the
+proxy's exact name and namespace. Catalog applies EnvoyProxy at wave `-1`, before
+GatewayClass and routing at wave `0`.
+
+```sh
+kubectl -n argocd get applications all-apps envoy-gateway
+kubectl -n envoy-gateway-system get envoyproxy gateway-configuration
+kubectl get gatewayclass envoy-gateway -o yaml
+```
+
+If the proxy exists but GatewayClass still reports the earlier lookup failure,
+restart the controller to reconcile existing resources, then check acceptance:
+
+```sh
+kubectl -n envoy-gateway-system rollout restart deployment/envoy-gateway
+kubectl -n envoy-gateway-system rollout status deployment/envoy-gateway --timeout=120s
+kubectl wait --for=condition=Accepted gatewayclass/envoy-gateway --timeout=120s
+```
+
 ## ClusterIssuer CRD missing
 
 **Problem:** Kubernetes cannot find `cert-manager.io/ClusterIssuer`.
@@ -84,7 +109,14 @@ kubectl get validatingwebhookconfiguration cert-manager-webhook \
 kubectl -n argocd get application cert-manager -o jsonpath='{.spec.ignoreDifferences}{"\n"}'
 ```
 
-Publish, refresh, and sync the root. Other webhook settings must remain managed.
+The AKS Envoy overlay defines this rule in its cert-manager Application patch.
+The root requires each child to be both `Synced` and `Healthy`; webhook drift can
+block it at wave `-3`, before EnvoyProxy and routing updates apply.
+
+Publish the patch to the root's configured Git revision. If a root operation is
+already waiting on the old revision, terminate that operation in Argo CD. Hard
+refresh and sync `all-apps`, then verify cert-manager becomes `Synced` and
+`Healthy`. Other webhook settings must remain managed.
 
 ## Local Argo CD connection resets
 

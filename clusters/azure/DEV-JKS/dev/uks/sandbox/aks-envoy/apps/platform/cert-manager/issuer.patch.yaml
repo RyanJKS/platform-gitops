@@ -1,0 +1,20 @@
+- op: replace
+  path: /metadata/name
+  value: letsencrypt-prod
+- op: replace
+  path: /metadata/annotations/argocd.argoproj.io~1sync-wave
+  value: "0"
+- op: replace
+  path: /spec/acme
+  value:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: rjhelan@gmail.com
+    privateKeySecretRef:
+      name: letsencrypt-prod-account-key
+    solvers:
+      - dns01:
+          azureDNS:
+            subscriptionID: 91c6f5e9-f6ab-400c-b5e7-265fd48053d3
+            resourceGroupName: SANDBOX-SHARED-UKS-DEV-RG
+            hostedZoneName: jkslabs.site
+            environment: AzurePublicCloud

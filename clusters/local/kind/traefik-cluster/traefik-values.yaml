@@ -1,0 +1,47 @@
+ingressClass:
+  enabled: true
+  isDefaultClass: false
+  name: traefik
+
+providers:
+  kubernetesCRD:
+    enabled: true
+  kubernetesIngress:
+    enabled: true
+    ingressClass: traefik
+    publishedService:
+      enabled: true
+  kubernetesGateway:
+    enabled: false
+
+gateway:
+  enabled: false
+gatewayClass:
+  enabled: false
+
+api:
+  dashboard: true
+
+service:
+  # Set cloud-specific load balancer annotations in the cluster copy.
+  annotations: {}
+  spec:
+    type: LoadBalancer
+
+ports:
+  web:
+    port: 8000
+    exposedPort: 80
+    expose:
+      default: true
+  websecure:
+    port: 8443
+    exposedPort: 443
+    expose:
+      default: true
+    http:
+      tls:
+        enabled: true
+
+# Define hostnames and TLS Secrets in cluster-owned Ingress resources.
+#

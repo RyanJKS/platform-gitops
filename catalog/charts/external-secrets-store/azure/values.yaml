@@ -1,0 +1,5 @@
+# Define readers, vault connections, and remote secret references per cluster.
+namespaces: {}
+serviceAccounts: {}
+clusterSecretStores: {}
+externalSecrets: {}

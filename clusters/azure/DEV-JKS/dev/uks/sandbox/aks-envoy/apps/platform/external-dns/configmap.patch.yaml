@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: external-dns-azure
+data:
+  azure.json: |
+    {
+      "cloud": "AzurePublicCloud",
+      "tenantId": "bac158f2-9dfe-4f66-b3e8-7fed8227d08f",
+      "subscriptionId": "91c6f5e9-f6ab-400c-b5e7-265fd48053d3",
+      "resourceGroup": "SANDBOX-SHARED-UKS-DEV-RG",
+      "useWorkloadIdentityExtension": true
+    }

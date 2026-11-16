@@ -1,0 +1,50 @@
+# Copy this mapping into the value of a cluster kustomization.yaml patch.
+# Use op: replace and path: /spec/sources/0/helm/valuesObject.
+# Replace each marker with its actual cluster setting before syncing.
+ingressClass:
+  enabled: true
+  isDefaultClass: false
+  name: __PLACEHOLDER__ # IngressClass name, for example traefik.
+
+providers:
+  kubernetesCRD:
+    enabled: false
+  kubernetesIngress:
+    enabled: true
+    ingressClass: __PLACEHOLDER__ # Must match ingressClass.name.
+    publishedService:
+      enabled: true
+  kubernetesGateway:
+    enabled: false
+
+gateway:
+  enabled: false
+gatewayClass:
+  enabled: false
+
+api:
+  dashboard: false
+
+service:
+  # Set cloud-specific load balancer annotations in the cluster copy.
+  annotations: {}
+  spec:
+    type: LoadBalancer
+
+ports:
+  web:
+    port: 8000
+    exposedPort: 80
+    expose:
+      default: true
+  websecure:
+    port: 8443
+    exposedPort: 443
+    expose:
+      default: true
+    http:
+      tls:
+        enabled: true
+
+# Define hostnames and TLS Secrets in cluster-owned Ingress resources.
+# No HTTP-to-HTTPS redirect is enabled by this template.
