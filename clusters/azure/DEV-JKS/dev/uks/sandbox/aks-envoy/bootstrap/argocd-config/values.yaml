@@ -2,4 +2,4 @@
 source:
   path: clusters/azure/DEV-JKS/dev/uks/sandbox/aks-envoy/apps
   repoURL: https://github.com/RyanJKS/platform-gitops.git
-  targetRevision: feature/monitoring
+  targetRevision: main

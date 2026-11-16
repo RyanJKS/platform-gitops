@@ -6,7 +6,7 @@ then installs Cilium, ESO, platform secrets, Argo CD with
 SSO, and the separate root Application release. See the
 [bootstrap README](bootstrap/README.md) for the dependency diagram and ownership.
 
-The root selects [apps/platform](apps/platform/README.md) on `feature/monitoring`:
+The root selects [apps/platform](apps/platform/README.md) on `main`:
 Gateway API CRDs, cert-manager, Envoy Gateway, ExternalDNS, the platform AppProject, and Argo CD
 HTTPS routing. Commit and push these files before deploying. Keep the root and
 Envoy values Git source on the same revision. Private Git repository credentials

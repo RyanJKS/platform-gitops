@@ -23,10 +23,11 @@ the Application before bootstrap adopts the root.
 ## App of apps root
 
 The root uses the built-in `default` AppProject, repository
-`https://github.com/RyanJKS/platform-gitops.git`, revision `dev/sandbox`, and path
-`clusters/azure/DEV-JKS/dev/uks/sandbox/aks-envoy`. Its destination is this cluster's
-`argocd` namespace. Change `extraObjects` if the repository or revision differs,
-and publish the reviewed cluster selection to that revision before bootstrap.
+`https://github.com/RyanJKS/platform-gitops.git`, revision `main`, and path
+`clusters/azure/DEV-JKS/dev/uks/sandbox/aks-envoy/apps`. Its destination is this cluster's
+`argocd` namespace. Root source values live in `bootstrap/argocd-config/values.yaml`.
+Merge the reviewed cluster selection to `main` before bootstrap. Keep the root
+and Envoy Gateway values Git source on `main`.
 Private repositories require repository credentials configured separately.
 
 The chart renders its CRDs as ordinary templates. The root therefore uses Helm
@@ -183,7 +184,8 @@ for supported login methods.
 
 Commit and push the reviewed workflow and cluster configuration. GitHub must
 have the workflow on the default branch before it exposes manual dispatch.
-Open **Actions > Helm bootstrap > Run workflow** and select the reviewed branch.
+Open **Actions > Helm bootstrap > Run workflow** and select `main` after merging
+the reviewed changes.
 There are no automatic push or pull-request deployments. Runs for this cluster
 are serialized without cancelling an installation already in progress.
 

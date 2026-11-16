@@ -50,7 +50,7 @@
 - cert-manager generates Certificate `argocd-server-tls` from the annotated Gateway. TLS Secret: `argocd-server-tls`; HTTP redirects to HTTPS.
 - Listeners accept routes only from `argocd`. Argo CD CLI requires `--grpc-web`.
 - Argo CD SSO and ServiceAccount stay in bootstrap.
-- Keep root and Envoy values Git revisions aligned: currently `feature/monitoring`.
+- Keep root and Envoy values Git revisions aligned on `main`.
 
 ## Verify
 

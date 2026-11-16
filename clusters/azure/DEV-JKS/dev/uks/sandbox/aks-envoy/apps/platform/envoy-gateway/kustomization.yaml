@@ -11,4 +11,4 @@ patches:
     patch: |
       - op: replace
         path: /spec/sources/2/targetRevision
-        value: feature/monitoring
+        value: main
